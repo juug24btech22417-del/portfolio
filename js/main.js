@@ -431,12 +431,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const progressText = document.querySelector('.progress-text');
         const ringCircumference = 258; // 2 * PI * 41
 
+        // Track active node for mobile
+        let activeNode = null;
+
         skillNodes.forEach(node => {
             const skillName = node.dataset.skill;
             const skillLevel = parseInt(node.dataset.level);
             const planetIcon = node.querySelector('.node-planet').textContent;
 
-            node.addEventListener('mouseenter', () => {
+            const showSkillDetail = (e) => {
+                e.stopPropagation();
+                activeNode = node;
+
                 orbitTracks.forEach(track => track.style.animationPlayState = 'paused');
                 detailName.textContent = skillName;
 
@@ -449,6 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressRing.style.strokeDashoffset = offset;
 
                 // Animate number
+                if (progressText) progressText.innerHTML = '0<span>%</span>';
                 let current = 0;
                 const increment = skillLevel / 20;
                 const timer = setInterval(() => {
@@ -464,21 +471,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Store timer to clear on leave
                 node._progressTimer = timer;
-            });
+            };
 
-            node.addEventListener('mouseleave', () => {
+            const hideSkillDetail = () => {
+                activeNode = null;
                 orbitTracks.forEach(track => track.style.animationPlayState = 'running');
                 skillDetail.classList.remove('active');
                 progressRing.style.strokeDashoffset = ringCircumference;
                 if (node._progressTimer) clearInterval(node._progressTimer);
+            };
+
+            // Desktop hover
+            node.addEventListener('mouseenter', showSkillDetail);
+            node.addEventListener('mouseleave', hideSkillDetail);
+
+            // Mobile touch
+            node.addEventListener('touchstart', showSkillDetail, { passive: true });
+
+            // Click for both desktop and mobile
+            node.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (activeNode === node) {
+                    // Toggle off if clicking same node
+                    hideSkillDetail();
+                } else {
+                    showSkillDetail(e);
+                }
             });
         });
 
+        // Close when clicking outside
         document.addEventListener('click', () => {
-            skillDetail.classList.remove('active');
-            progressRing.style.strokeDashoffset = ringCircumference;
-            orbitTracks.forEach(track => track.style.animationPlayState = 'running');
+            if (activeNode) {
+                activeNode = null;
+                skillDetail.classList.remove('active');
+                progressRing.style.strokeDashoffset = ringCircumference;
+                orbitTracks.forEach(track => track.style.animationPlayState = 'running');
+            }
         });
+
+        // Prevent closing when clicking detail card itself
+        skillDetail.addEventListener('click', (e) => e.stopPropagation());
 
         // Randomize starting rotation
         orbitTracks.forEach(track => {

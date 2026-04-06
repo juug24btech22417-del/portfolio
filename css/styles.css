@@ -1104,6 +1104,19 @@ ul {
     z-index: 100;
 }
 
+/* Mobile touch feedback */
+@media (pointer: coarse) {
+    .skill-node:active .node-planet {
+        transform: scale(1.2);
+        border-color: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+    }
+
+    .skill-detail {
+        pointer-events: auto;
+    }
+}
+
 /* Position nodes ON the ring circumference using transform-origin */
 .orbit-inner .skill-node { transform-origin: center; }
 .orbit-inner .skill-node:nth-child(1) { transform: rotate(0deg) translateX(120px) rotate(0deg); }
@@ -1338,9 +1351,14 @@ ul {
         transform: scale(0.7);
     }
 
+    .skill-detail {
+        z-index: 200;
+    }
+
     .skill-detail-content {
-        min-width: 200px;
-        padding: 16px 24px;
+        min-width: 180px;
+        padding: 16px 20px;
+        max-width: 90vw;
     }
 
     .skill-detail-name {
@@ -1351,6 +1369,19 @@ ul {
         flex-direction: column;
         align-items: center;
         gap: 16px;
+    }
+
+    .skill-node {
+        cursor: pointer;
+    }
+
+    .progress-ring {
+        width: 80px;
+        height: 80px;
+    }
+
+    .progress-text {
+        font-size: 18px;
     }
 }
 
