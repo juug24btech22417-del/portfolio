@@ -9,6 +9,17 @@ document.addEventListener('DOMContentLoaded', () => {
     gsap.registerPlugin(ScrollTrigger);
 
     // ========================================
+    // WAIT FOR INTRO
+    // ========================================
+    // The intro splash runs on its own timeline. If we initialize
+    // entrance animations here on DOMContentLoaded, they'll fire
+    // invisibly behind the splash and the user will see the
+    // portfolio "snap" into place when the splash lifts. Instead,
+    // we wait for window.__waitForIntro (provided by js/intro.js)
+    // to fire its callback once the splash exit starts.
+    function initPortfolio() {
+
+    // ========================================
     // SCROLL PROGRESS BAR
     // ========================================
     const scrollProgress = document.querySelector('.scroll-progress');
@@ -857,4 +868,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     console.log('Portfolio animations initialized');
+
+    } // end initPortfolio()
+
+    // Gate on the intro splash. intro.js exposes __waitForIntro if
+    // the intro is in use; it will call our callback when the splash
+    // exit starts, so entrance animations actually play during the
+    // reveal instead of having already finished invisibly.
+    if (typeof window.__waitForIntro === 'function') {
+        window.__waitForIntro(initPortfolio);
+    } else {
+        initPortfolio();
+    }
 });

@@ -50,6 +50,15 @@
     let activeIndex = 0;
     let timeouts = [];
 
+    // Callbacks waiting for the intro to finish. Lets main.js delay
+    // its entrance animations until the splash actually starts
+    // leaving, so the user sees the portfolio animate in rather
+    // than snap in.
+    const introWaiters = [];
+    window.__waitForIntro = function (cb) {
+        if (typeof cb === 'function') introWaiters.push(cb);
+    };
+
     function t(fn, ms) {
         timeouts.push(setTimeout(fn, ms));
     }
@@ -96,6 +105,15 @@
     }
 
     function endIntro() {
+        // Fire any callbacks waiting for the intro to finish so they
+        // can start their entrance animations now. This lets main.js
+        // animate the portfolio in behind the dissolving splash
+        // instead of having already finished invisibly.
+        const waiters = introWaiters.splice(0);
+        waiters.forEach(cb => {
+            try { cb(); } catch (err) { console.error('Intro waiter failed:', err); }
+        });
+
         const visible = slots[activeIndex];
         visible.classList.remove('is-visible');
         if (!prefersReducedMotion) visible.classList.add('is-leaving');
