@@ -18,8 +18,26 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/intro.css">
 </head>
-<body>
+<body class="intro-active">
+    <!-- Intro / Splash Screen -->
+    <div id="intro-screen" class="intro-screen" aria-hidden="true" role="dialog" aria-label="Welcome">
+        <div class="intro-stage">
+            <h1 class="intro-word" id="intro-word">Hello</h1>
+            <span class="intro-label" id="intro-label">// ENGLISH</span>
+        </div>
+        <div class="intro-dots" id="intro-dots" aria-hidden="true">
+            <span class="intro-dot"></span>
+            <span class="intro-dot"></span>
+            <span class="intro-dot"></span>
+            <span class="intro-dot"></span>
+            <span class="intro-dot"></span>
+            <span class="intro-dot"></span>
+            <span class="intro-dot"></span>
+        </div>
+    </div>
+
     <!-- Three.js Background Canvas -->
     <canvas id="space-bg" class="space-background"></canvas>
 
@@ -493,5 +511,6 @@
     <!-- Portfolio Scripts -->
     <script src="js/three-bg.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/intro.js" defer></script>
 </body>
 </html>
