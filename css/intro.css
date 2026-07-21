@@ -14,9 +14,6 @@ body.intro-active {
     inset: 0;
     z-index: 9999;
     background: var(--bg, #04060D);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     opacity: 0;
     transform: scale(1);
     transform-origin: center center;
@@ -37,15 +34,10 @@ body.intro-active {
     pointer-events: none;
 }
 
-.intro-stage {
-    position: relative;
-    /* Reserve height so the stage doesn't resize as words change.
-       Big enough that the absolute-positioned words have a stable
-       layout box to anchor against during the crossfade. */
-    min-height: 50vh;
-    line-height: 1;
-    width: 100%;
-}
+/* No stage wrapper needed — the words are absolute-positioned
+   directly against the screen (next positioned ancestor). This
+   avoids any min-height layer that could shift the centering
+   on mobile when the viewport resizes. */
 
 .intro-word {
     position: absolute;
