@@ -55,6 +55,13 @@
     }
 
     function applyWord(slot, g) {
+        // Reset the slot to its default "hidden, below, blurred" state
+        // before applying new content. Without this, a slot that was
+        // previously marked is-leaving would still have those CSS rules
+        // applied (they come after is-visible in the cascade) and the
+        // new word would never become visible.
+        slot.classList.remove('is-visible');
+        slot.classList.remove('is-leaving');
         slot.textContent = g.word;
         slot.classList.toggle('is-non-latin', NON_LATIN_LANGS.includes(g.lang));
     }
