@@ -39,16 +39,19 @@ body.intro-active {
 
 .intro-stage {
     position: relative;
-    /* Reserve height so the stage doesn't resize as words change */
-    min-height: 1em;
+    /* Reserve height so the stage doesn't resize as words change.
+       Big enough that the absolute-positioned words have a stable
+       layout box to anchor against during the crossfade. */
+    min-height: 50vh;
     line-height: 1;
+    width: 100%;
 }
 
 .intro-word {
     position: absolute;
-    top: 0;
+    top: 50%;
     left: 50%;
-    transform: translate(-50%, 0);
+    transform: translate(-50%, -50%);
     margin: 0;
     font-family: var(--font-display, 'Outfit', sans-serif);
     font-weight: 300;
@@ -62,7 +65,7 @@ body.intro-active {
     will-change: transform, opacity, filter;
 
     /* Default state for the "in" slot: hidden, slightly below, blurred */
-    transform: translate(-50%, 30px);
+    transform: translate(-50%, calc(-50% + 30px));
     opacity: 0;
     filter: blur(12px);
     transition:
@@ -78,27 +81,32 @@ body.intro-active {
 
 /* Visible state: centered, sharp, full opacity */
 .intro-word.is-visible {
-    transform: translate(-50%, 0);
+    transform: translate(-50%, -50%);
     opacity: 1;
     filter: blur(0);
 }
 
 /* Outgoing state: pushed up, faded, blurred */
 .intro-word.is-leaving {
-    transform: translate(-50%, -30px);
+    transform: translate(-50%, calc(-50% - 30px));
     opacity: 0;
     filter: blur(12px);
 }
 
 /* Reduced motion: no slide or blur, just opacity */
 @media (prefers-reduced-motion: reduce) {
-    .intro-screen,
-    .intro-word {
+    .intro-screen {
         transition: opacity 0.2s linear;
-        transform: none;
+    }
+    .intro-word {
+        /* Keep translate(-50%, -50%) so it stays centered,
+           just kill the offset transitions. */
+        transform: translate(-50%, -50%);
+        transition: opacity 0.2s linear;
+        filter: none;
     }
     .intro-word.is-leaving {
-        transform: none;
+        transform: translate(-50%, -50%);
     }
 }
 
