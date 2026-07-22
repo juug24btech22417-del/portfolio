@@ -65,7 +65,7 @@
         if (ctx.state === 'suspended') ctx.resume();
 
         const now = ctx.currentTime;
-        const dur = 0.45; // total whoosh length (s)
+        const dur = 0.55; // total whoosh length (s)
 
         // ---- Noise source ----
         // A buffer of white noise we replay each time. Generated
@@ -82,28 +82,34 @@
         const src = ctx.createBufferSource();
         src.buffer = playWhoosh._buffer;
 
-        // ---- Band-pass filter (sweeps high → low) ----
-        // This is what gives the "whoosh" character. The filter
-        // narrows the noise from airy/bright down to a low
-        // muffled thump, mimicking wind passing by your ear.
+        // ---- High-pass (kills the low "body" that made it
+        // sound like a clap) ----
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 600;
+        hp.Q.value = 0.7;
+
+        // ---- Band-pass (sweeps high → low) ----
+        // Wide Q (~0.5) so it sounds like AIR, not a tone.
+        // Starting at 5000 Hz is bright/airy, sweeping down to
+        // 800 Hz gives the smooth swoosh — not a percussive hit.
         const bp = ctx.createBiquadFilter();
         bp.type = 'bandpass';
-        bp.Q.value = 1.4;
-        bp.frequency.setValueAtTime(3200, now);
-        bp.frequency.exponentialRampToValueAtTime(400, now + dur * 0.65);
-        // Hold the low end briefly so the whoosh has a tail.
-        bp.frequency.setValueAtTime(400, now + dur * 0.65);
-        bp.frequency.exponentialRampToValueAtTime(250, now + dur);
+        bp.Q.value = 0.5;
+        bp.frequency.setValueAtTime(5000, now);
+        bp.frequency.exponentialRampToValueAtTime(800, now + dur);
 
         // ---- Gain envelope ----
-        // Quick swell-up, then exponential fade. Volume sits
-        // around 0.9 — same loudness as the previous gong.
+        // Slower swell (90ms) so it doesn't have a sharp attack
+        // that reads as a "hit". Smooth ramp in, smooth fade.
         const gain = ctx.createGain();
         gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.9, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.9, now + 0.09);
+        gain.gain.setValueAtTime(0.9, now + dur * 0.5);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
 
-        src.connect(bp);
+        src.connect(hp);
+        hp.connect(bp);
         bp.connect(gain);
         gain.connect(ctx.destination);
 
