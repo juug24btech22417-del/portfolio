@@ -56,7 +56,7 @@
     // property for level control. Simpler, more reliable, and
     // doesn't depend on a running AudioContext.
     const WHOOSH_SRC = 'assets/whoosh.mp3';
-    const WHOOSH_VOLUME = 0.2; // 0.0–1.0 on the <audio> element
+    const WHOOSH_VOLUME = 0.15; // 0.0–1.0 on the <audio> element
 
     let whooshAudio = null;
 
