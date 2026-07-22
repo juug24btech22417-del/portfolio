@@ -99,7 +99,7 @@
     // than the `loop` attribute so we can fade in/out smoothly
     // if we ever want to.
     const MUSIC_SRC   = 'assets/music.mp3';
-    const MUSIC_VOLUME = 0.15; // 0.0–1.0
+    const MUSIC_VOLUME = 0.3; // 0.0–1.0
 
     let musicAudio = null;
     let musicStarted = false;
