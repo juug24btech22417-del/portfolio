@@ -5,10 +5,14 @@
    fade-out (text swaps while invisible) + fade-in, with a
    pre-recorded whoosh (assets/whoosh.mp3) on each word.
 
-   Mobile browsers block autoplay, so the sequence is gated
-   behind a "Tap to enter" button — the tap counts as a
-   user gesture, which lets the browser autoplay the
-   <audio> element on iOS/Safari.
+   After the greetings end, a looping background music track
+   (assets/music.mp3) starts. A small speaker icon in the
+   corner lets the user mute/unmute.
+
+   Mobile browsers block autoplay, so the WHOLE thing (intro
+   + music) is gated behind a "Tap to enter" button — the
+   tap counts as a user gesture, which lets the browser
+   autoplay the <audio> elements on iOS/Safari.
    ============================================================ */
 
 (function () {
@@ -34,10 +38,11 @@
     const STEP = prefersReducedMotion ? 600 : FADE + HOLD;
 
     // ---- DOM refs -------------------------------------------------------
-    const screen     = document.getElementById('intro-screen');
-    const word       = document.getElementById('intro-word');
-    const startBtn   = document.getElementById('intro-start');
-    const body       = document.body;
+    const screen       = document.getElementById('intro-screen');
+    const word         = document.getElementById('intro-word');
+    const startBtn     = document.getElementById('intro-start');
+    const musicToggle  = document.getElementById('music-toggle');
+    const body         = document.body;
 
     if (!screen || !word) {
         body.classList.remove('intro-active');
@@ -85,6 +90,56 @@
                 // — the intro still works visually.
                 console.warn('Whoosh playback failed:', err);
             });
+        }
+    }
+
+    // ---- Background music ---------------------------------------------
+    // A separate <audio> element loops a short ambient track
+    // after the intro ends. Loops via the 'ended' event rather
+    // than the `loop` attribute so we can fade in/out smoothly
+    // if we ever want to.
+    const MUSIC_SRC   = 'assets/music.mp3';
+    const MUSIC_VOLUME = 0.15; // 0.0–1.0
+
+    let musicAudio = null;
+    let musicStarted = false;
+
+    function ensureMusicElement() {
+        if (musicAudio) return musicAudio;
+        musicAudio = new Audio(MUSIC_SRC);
+        musicAudio.preload = 'auto';
+        musicAudio.volume = MUSIC_VOLUME;
+        // Loop forever once it ends.
+        musicAudio.addEventListener('ended', () => {
+            try { musicAudio.currentTime = 0; } catch (e) {}
+            const p = musicAudio.play();
+            if (p && p.catch) p.catch(() => {});
+        });
+        return musicAudio;
+    }
+
+    function startMusic() {
+        if (musicStarted) return;
+        musicStarted = true;
+        const audio = ensureMusicElement();
+        if (!audio) return;
+        const p = audio.play();
+        if (p && p.catch) {
+            p.catch(err => {
+                // Autoplay blocked — fail silent. The mute
+                // button will still appear, the user can click
+                // it to retry playback.
+                console.warn('Music playback failed:', err);
+            });
+        }
+    }
+
+    function toggleMute() {
+        if (!musicAudio) return;
+        musicAudio.muted = !musicAudio.muted;
+        if (musicToggle) {
+            musicToggle.classList.toggle('is-muted', musicAudio.muted);
+            musicToggle.setAttribute('aria-pressed', musicAudio.muted ? 'true' : 'false');
         }
     }
 
@@ -166,6 +221,24 @@
         screen.classList.add('is-done');
         screen.setAttribute('aria-hidden', 'true');
 
+        // Start the looping background music now that the
+        // greetings are done. Started on the same user-gesture
+        // tap that fired the intro, so iOS will allow it.
+        startMusic();
+
+        // Reveal the music mute control. We unhide it now so
+        // it pops in alongside the portfolio's reveal — feels
+        // intentional rather than appearing later.
+        if (musicToggle) {
+            musicToggle.hidden = false;
+            // Next frame so the [hidden] removal commits first,
+            // then the .is-visible class can transition opacity.
+            requestAnimationFrame(() => {
+                musicToggle.classList.add('is-visible');
+            });
+            musicToggle.addEventListener('click', toggleMute);
+        }
+
         t(() => {
             screen.hidden = true;
             body.classList.remove('intro-active');
@@ -207,16 +280,19 @@
             // Show the "Tap to enter" button. The actual
             // sequence waits for the tap — the tap counts as
             // a user gesture, which lets the browser autoplay
-            // the <audio> element on iOS/Safari.
+            // the <audio> elements (whoosh + background music)
+            // on iOS/Safari.
             if (startBtn) {
                 startBtn.classList.add('is-visible');
                 const onTap = () => {
                     startBtn.removeEventListener('click', onTap);
-                    // Pre-create and prime the audio element on
+                    // Pre-create and prime BOTH audio elements on
                     // the gesture. This forces the browser to
-                    // start loading the MP3 NOW and lets the
-                    // first .play() in runSequence() succeed.
+                    // start loading the MP3s NOW and lets the
+                    // first .play() in runSequence() and
+                    // endIntro() succeed.
                     ensureWhooshElement();
+                    ensureMusicElement();
                     runSequence();
                 };
                 startBtn.addEventListener('click', onTap);

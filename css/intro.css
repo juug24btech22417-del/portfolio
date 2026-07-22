@@ -148,3 +148,81 @@ body.intro-active {
 .intro-screen[hidden] {
     display: none;
 }
+
+/* ---- Music toggle (lives in the corner, survives the intro) ---- */
+
+.music-toggle {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 9000;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4, 6, 13, 0.7);
+    border: 1px solid rgba(217, 232, 245, 0.2);
+    border-radius: 50%;
+    color: var(--text, #D9E8F5);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+        opacity   0.4s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.3s ease,
+        background-color 0.3s ease;
+}
+
+.music-toggle[hidden] {
+    display: none;
+}
+
+.music-toggle.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.music-toggle:hover {
+    border-color: rgba(217, 232, 245, 0.5);
+    background: rgba(4, 6, 13, 0.85);
+}
+
+.music-toggle:active {
+    transform: translateY(0) scale(0.95);
+}
+
+.music-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+    transition: opacity 0.2s ease;
+}
+
+/* Show one icon, hide the other, based on muted state. */
+.music-toggle .music-icon-off { display: none; }
+.music-toggle.is-muted .music-icon-on  { display: none; }
+.music-toggle.is-muted .music-icon-off { display: block; }
+
+@media (prefers-reduced-motion: reduce) {
+    .music-toggle {
+        transition: opacity 0.2s linear;
+    }
+}
+
+/* On very narrow screens, push it slightly inward to clear
+   browser chrome / safe areas. */
+@media (max-width: 480px) {
+    .music-toggle {
+        right: 16px;
+        bottom: 16px;
+        width: 40px;
+        height: 40px;
+    }
+}
