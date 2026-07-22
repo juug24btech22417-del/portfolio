@@ -3,7 +3,7 @@
    Single <h1>, JS-positioned at the visual center on every
    frame (visualViewport API). Each transition = quick
    fade-out (text swaps while invisible) + fade-in, with a
-   procedurally-synthesized deep gong on each word.
+   procedurally-synthesized cinematic whoosh on each word.
 
    Mobile browsers block autoplay, so the sequence is gated
    behind a "Tap to enter" button — the tap counts as a
@@ -44,11 +44,11 @@
     }
 
     // ---- Audio ---------------------------------------------------------
-    // Procedurally-synthesized deep gong. No asset to load.
-    // The gong is built from two detuned sine oscillators (the
-    // "strike" + a higher partial) with a fast attack and a
-    // ~2.5s exponential decay. Sounds like a Tibetan singing
-    // bowl / temple bell — exactly the "deep gong" feel.
+    // Procedurally-synthesized cinematic whoosh. No asset to load.
+    // White noise routed through a band-pass filter that sweeps
+    // from high (~3000 Hz) to low (~400 Hz) over ~250ms, with
+    // a quick gain swell. Sounds like the wind/transition swoosh
+    // you hear when text slides in/out in a film.
     let audioCtx = null;
 
     function ensureAudio() {
@@ -59,45 +59,56 @@
         return audioCtx;
     }
 
-    function playGong() {
+    function playWhoosh() {
         const ctx = ensureAudio();
         if (!ctx) return;
         if (ctx.state === 'suspended') ctx.resume();
 
         const now = ctx.currentTime;
-        const master = ctx.createGain();
-        master.gain.setValueAtTime(0.0001, now);
-        // Attack then long exponential decay. Louder now — was 0.55.
-        master.gain.exponentialRampToValueAtTime(1.4, now + 0.012);
-        master.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
-        master.connect(ctx.destination);
+        const dur = 0.45; // total whoosh length (s)
 
-        // Fundamental — deep, around F2 (~87 Hz). The two
-        // oscillators are slightly detuned (a few Hz apart) to
-        // create the beating/wobble characteristic of a real
-        // bell — a single pure sine sounds electronic.
-        const partials = [
-            { freq: 87,  detune:  -4, gain: 1.0 },
-            { freq: 87,  detune:  +5, gain: 0.9 },
-            // Higher "shimmer" partial — quieter, decays faster.
-            { freq: 174, detune:  +2, gain: 0.45 },
-            { freq: 261, detune:  -3, gain: 0.25 }
-        ];
+        // ---- Noise source ----
+        // A buffer of white noise we replay each time. Generated
+        // once on the first call (cached on the context).
+        if (!playWhoosh._buffer) {
+            const len = Math.floor(ctx.sampleRate * 1.5);
+            const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            playWhoosh._buffer = buf;
+        }
+        const src = ctx.createBufferSource();
+        src.buffer = playWhoosh._buffer;
 
-        partials.forEach(p => {
-            const osc = ctx.createOscillator();
-            osc.type = 'sine';
-            osc.frequency.value = p.freq;
-            osc.detune.value = p.detune;
+        // ---- Band-pass filter (sweeps high → low) ----
+        // This is what gives the "whoosh" character. The filter
+        // narrows the noise from airy/bright down to a low
+        // muffled thump, mimicking wind passing by your ear.
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.Q.value = 1.4;
+        bp.frequency.setValueAtTime(3200, now);
+        bp.frequency.exponentialRampToValueAtTime(400, now + dur * 0.65);
+        // Hold the low end briefly so the whoosh has a tail.
+        bp.frequency.setValueAtTime(400, now + dur * 0.65);
+        bp.frequency.exponentialRampToValueAtTime(250, now + dur);
 
-            const g = ctx.createGain();
-            g.gain.value = p.gain;
+        // ---- Gain envelope ----
+        // Quick swell-up, then exponential fade. Volume sits
+        // around 0.9 — same loudness as the previous gong.
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.9, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
 
-            osc.connect(g);
-            g.connect(master);
-            osc.start(now);
-            osc.stop(now + 2.7);
-        });
+        src.connect(bp);
+        bp.connect(gain);
+        gain.connect(ctx.destination);
+
+        src.start(now);
+        src.stop(now + dur + 0.05);
     }
 
     // ---- Centering ------------------------------------------------------
@@ -161,7 +172,7 @@
         word.classList.remove('is-visible');
         t(() => {
             applyGreeting(GREETINGS[i]);
-            playGong();
+            playWhoosh();
             requestAnimationFrame(() => {
                 word.classList.add('is-visible');
             });
@@ -195,8 +206,8 @@
             startBtn.style.pointerEvents = 'none';
         }
 
-        // First word: play its gong, then fade in.
-        playGong();
+        // First word: play its whoosh, then fade in.
+        playWhoosh();
         applyGreeting(GREETINGS[0]);
         requestAnimationFrame(() => {
             word.classList.add('is-visible');
