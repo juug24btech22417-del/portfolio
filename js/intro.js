@@ -25,8 +25,7 @@
         { word: 'Hola',      lang: 'es' },
         { word: 'Bonjour',   lang: 'fr' },
         { word: 'こんにちは', lang: 'ja' },
-        { word: 'مرحبا',      lang: 'ar' },
-        { word: 'Hallo',     lang: 'de' }
+        { word: 'مرحبا',      lang: 'ar' }
     ];
 
     const NON_LATIN_LANGS = ['hi', 'ja', 'ar'];
