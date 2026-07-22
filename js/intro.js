@@ -104,8 +104,8 @@
         // that reads as a "hit". Smooth ramp in, smooth fade.
         const gain = ctx.createGain();
         gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.9, now + 0.09);
-        gain.gain.setValueAtTime(0.9, now + dur * 0.5);
+        gain.gain.exponentialRampToValueAtTime(0.6, now + 0.09);
+        gain.gain.setValueAtTime(0.6, now + dur * 0.5);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
 
         src.connect(hp);
