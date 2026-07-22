@@ -3,11 +3,12 @@
    Single <h1>, JS-positioned at the visual center on every
    frame (visualViewport API). Each transition = quick
    fade-out (text swaps while invisible) + fade-in, with a
-   procedurally-synthesized cinematic whoosh on each word.
+   pre-recorded whoosh (assets/whoosh.mp3) on each word.
 
    Mobile browsers block autoplay, so the sequence is gated
    behind a "Tap to enter" button — the tap counts as a
-   user gesture, unlocking the Web Audio context.
+   user gesture, which lets the browser autoplay the
+   <audio> element on iOS/Safari.
    ============================================================ */
 
 (function () {
@@ -44,76 +45,44 @@
     }
 
     // ---- Audio ---------------------------------------------------------
-    // Plays a pre-recorded whoosh from assets/whoosh.mp3. We keep
-    // the volume control on a WebAudio GainNode so we can tweak
-    // loudness in one place. The file is loaded once and the
-    // <audio> element is rewound to 0 on each play — that's
-    // cheap (it's a tiny file) and avoids the latency of
-    // creating a new AudioBufferSource each time.
+    // Plays a pre-recorded whoosh from assets/whoosh.mp3.
+    //
+    // The previous version routed the <audio> element through a
+    // WebAudio GainNode. That works in theory, but on mobile the
+    // AudioContext starts in 'suspended' state, and the first
+    // play() fires before ctx.resume() completes — so the graph
+    // produces no sound. This version plays the <audio> directly
+    // (no WebAudio at all) and uses the element's `volume`
+    // property for level control. Simpler, more reliable, and
+    // doesn't depend on a running AudioContext.
     const WHOOSH_SRC = 'assets/whoosh.mp3';
-    const WHOOSH_VOLUME = 0.6; // peak gain (0.0–1.0)
+    const WHOOSH_VOLUME = 0.7; // 0.0–1.0 on the <audio> element
 
-    let audioCtx = null;
-    let whooshAudio = null;        // <audio> element
-    let whooshGain  = null;        // GainNode for volume
-
-    function ensureAudio() {
-        if (audioCtx) return audioCtx;
-        const Ctor = window.AudioContext || window.webkitAudioContext;
-        if (!Ctor) return null;
-        audioCtx = new Ctor();
-        whooshGain = audioCtx.createGain();
-        whooshGain.gain.value = WHOOSH_VOLUME;
-        whooshGain.connect(audioCtx.destination);
-        return audioCtx;
-    }
+    let whooshAudio = null;
 
     function ensureWhooshElement() {
         if (whooshAudio) return whooshAudio;
         whooshAudio = new Audio(WHOOSH_SRC);
         whooshAudio.preload = 'auto';
-        // Route through WebAudio so the GainNode controls volume.
-        // (Without this, the audio plays at full system volume
-        // and we can't tame it from JS.)
-        try { whooshAudio.crossOrigin = 'anonymous'; } catch (e) {}
+        whooshAudio.volume = WHOOSH_VOLUME;
         return whooshAudio;
     }
 
     function playWhoosh() {
-        const ctx = ensureAudio();
-        if (!ctx) return;
-        if (ctx.state === 'suspended') ctx.resume();
-
         const audio = ensureWhooshElement();
         if (!audio) return;
 
-        // First time: connect the <audio> element to the GainNode
-        // (createMediaElementSource can only be called once per
-        // element, hence the guard).
-        if (!whooshAudio._connected) {
-            try {
-                const src = ctx.createMediaElementSource(whooshAudio);
-                src.connect(whooshGain);
-                whooshAudio._connected = true;
-            } catch (e) {
-                // If the browser refuses MediaElementSource
-                // (rare), fall back to unconnected playback —
-                // it'll play at full volume, but the whoosh
-                // still works.
-                console.warn('MediaElementSource unavailable:', e);
-            }
-        }
-
-        // Rewind to start and play. Setting currentTime is what
-        // makes rapid back-to-back whooshes work — without it
-        // the second one would play from wherever the first
-        // left off (or refuse to restart).
+        // Rewind to start. The 'ended' listener restarts it for
+        // the next call — but we don't actually need that; the
+        // next call resets currentTime anyway. Kept for safety
+        // in case the previous play() was interrupted.
         try { audio.currentTime = 0; } catch (e) {}
+
         const p = audio.play();
         if (p && p.catch) {
             p.catch(err => {
-                // Autoplay was blocked, or audio failed to load.
-                // Fail silent — the intro still works visually.
+                // Autoplay blocked or file missing. Fail silent
+                // — the intro still works visually.
                 console.warn('Whoosh playback failed:', err);
             });
         }
@@ -236,14 +205,18 @@
             screen.setAttribute('aria-hidden', 'false');
 
             // Show the "Tap to enter" button. The actual
-            // sequence waits for the tap — that's the user
-            // gesture that unlocks Web Audio on mobile.
+            // sequence waits for the tap — the tap counts as
+            // a user gesture, which lets the browser autoplay
+            // the <audio> element on iOS/Safari.
             if (startBtn) {
                 startBtn.classList.add('is-visible');
                 const onTap = () => {
                     startBtn.removeEventListener('click', onTap);
-                    // Prime the audio context on the same gesture.
-                    ensureAudio();
+                    // Pre-create and prime the audio element on
+                    // the gesture. This forces the browser to
+                    // start loading the MP3 NOW and lets the
+                    // first .play() in runSequence() succeed.
+                    ensureWhooshElement();
                     runSequence();
                 };
                 startBtn.addEventListener('click', onTap);
