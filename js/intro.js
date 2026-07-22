@@ -1,15 +1,15 @@
 /* ============================================================
    Intro / Splash Screen — sequence driver
-   Apple-style crossfade between two stacked <h1> elements.
-   Each word: incoming slides up + unblurs while outgoing
-   slides up + blurs out. Plays once per page load.
+   Single <h1>. Positioned at the visual center on every
+   frame (via the visualViewport API, so iOS URL bar and
+   dynamic-viewport quirks can't shift it). Each transition
+   = quick fade-out (text swaps while invisible) + fade-in.
    ============================================================ */
 
 (function () {
     'use strict';
 
     // ---- Config ---------------------------------------------------------
-    // 7 greetings, no language label shown on screen.
     const GREETINGS = [
         { word: 'Hello',     lang: 'en' },
         { word: 'नमस्ते',     lang: 'hi' },
@@ -20,40 +20,68 @@
         { word: 'Hallo',     lang: 'de' }
     ];
 
-    // Scripts that aren't Latin-based — gets a subtle italic in the CSS.
     const NON_LATIN_LANGS = ['hi', 'ja', 'ar'];
 
-    // Timing (ms)
-    // Slide/blur transition is 700ms in CSS; we hold for a beat on top.
-    const TRANSITION = 700;
-    const HOLD       = 700;   // how long each word sits fully visible
-    const EXIT_FADE  = 600;
+    const FADE      = 250;
+    const HOLD      = 900;
+    const EXIT_FADE = 600;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const STEP = prefersReducedMotion ? 500 : TRANSITION + HOLD;
+    const STEP = prefersReducedMotion ? 600 : FADE + HOLD;
 
     // ---- DOM refs -------------------------------------------------------
     const screen = document.getElementById('intro-screen');
-    const slots  = [
-        document.getElementById('intro-word-a'),
-        document.getElementById('intro-word-b')
-    ];
-    const body = document.body;
+    const word   = document.getElementById('intro-word');
+    const body   = document.body;
 
-    if (!screen || !slots[0] || !slots[1]) {
-        // Markup missing — fail silent, just reveal the page.
+    if (!screen || !word) {
         body.classList.remove('intro-active');
         return;
     }
 
+    // ---- Centering ------------------------------------------------------
+    // Keep the word at the visual center on every frame. We use the
+    // visualViewport API when available (it reports the actually-
+    // visible viewport on mobile, accounting for URL bar collapse /
+    // soft keyboards), falling back to window.innerWidth/Height.
+    // This is the ONLY way to be sure the word stays put on iOS.
+    function recenter() {
+        const vv = window.visualViewport;
+        const w  = vv ? vv.width  : window.innerWidth;
+        const h  = vv ? vv.height : window.innerHeight;
+        // Use half the visual viewport as the center, so the
+        // word's translate(-50%,-50%) lands it perfectly centered
+        // even when the URL bar is partially collapsed.
+        word.style.setProperty('--cx', (w / 2) + 'px');
+        word.style.setProperty('--cy', (h / 2) + 'px');
+    }
+
+    let centerRAF = null;
+    function startCentering() {
+        if (centerRAF) return;
+        function tick() {
+            recenter();
+            centerRAF = requestAnimationFrame(tick);
+        }
+        tick();
+    }
+    function stopCentering() {
+        if (centerRAF) {
+            cancelAnimationFrame(centerRAF);
+            centerRAF = null;
+        }
+    }
+
+    // Also recenter on any viewport change
+    window.addEventListener('resize', recenter);
+    window.addEventListener('scroll', recenter, { passive: true });
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', recenter);
+        window.visualViewport.addEventListener('scroll', recenter);
+    }
+
     // ---- State ----------------------------------------------------------
-    // activeIndex = which slot currently has the visible word
-    let activeIndex = 0;
     let timeouts = [];
 
-    // Callbacks waiting for the intro to finish. Lets main.js delay
-    // its entrance animations until the splash actually starts
-    // leaving, so the user sees the portfolio animate in rather
-    // than snap in.
     const introWaiters = [];
     window.__waitForIntro = function (cb) {
         if (typeof cb === 'function') introWaiters.push(cb);
@@ -63,102 +91,68 @@
         timeouts.push(setTimeout(fn, ms));
     }
 
-    function applyWord(slot, g) {
-        // Reset the slot to its default "hidden, below, blurred" state
-        // before applying new content. Without this, a slot that was
-        // previously marked is-leaving would still have those CSS rules
-        // applied (they come after is-visible in the cascade) and the
-        // new word would never become visible.
-        slot.classList.remove('is-visible');
-        slot.classList.remove('is-leaving');
-        slot.textContent = g.word;
-        slot.classList.toggle('is-non-latin', NON_LATIN_LANGS.includes(g.lang));
+    function applyGreeting(g) {
+        word.textContent = g.word;
+        word.classList.toggle('is-non-latin', NON_LATIN_LANGS.includes(g.lang));
+        // Text width may have changed — re-center
+        recenter();
     }
 
-    // Show word at GREETINGS[i] using the inactive slot, while the
-    // active slot becomes "is-leaving".
     function transitionTo(i) {
-        const next = 1 - activeIndex;
-        const nextSlot = slots[next];
-        const leavingSlot = slots[activeIndex];
-
-        applyWord(nextSlot, GREETINGS[i]);
-
-        // Mark outgoing first, then on the next frame mark incoming.
-        // This guarantees the browser sees the state change and
-        // triggers the transition reliably.
-        if (prefersReducedMotion) {
-            leavingSlot.classList.remove('is-visible');
-            nextSlot.classList.add('is-visible');
-        } else {
-            leavingSlot.classList.remove('is-visible');
-            leavingSlot.classList.add('is-leaving');
-
-            // Force a reflow so the incoming slot's transition fires
-            // (otherwise the browser may batch both class changes).
-            void nextSlot.offsetWidth;
-
-            nextSlot.classList.add('is-visible');
-        }
-
-        activeIndex = next;
+        word.classList.remove('is-visible');
+        t(() => {
+            applyGreeting(GREETINGS[i]);
+            requestAnimationFrame(() => {
+                word.classList.add('is-visible');
+            });
+        }, FADE);
     }
 
     function endIntro() {
-        // Fire any callbacks waiting for the intro to finish so they
-        // can start their entrance animations now. This lets main.js
-        // animate the portfolio in behind the dissolving splash
-        // instead of having already finished invisibly.
         const waiters = introWaiters.splice(0);
         waiters.forEach(cb => {
             try { cb(); } catch (err) { console.error('Intro waiter failed:', err); }
         });
 
-        const visible = slots[activeIndex];
-        visible.classList.remove('is-visible');
-        if (!prefersReducedMotion) visible.classList.add('is-leaving');
+        word.classList.remove('is-visible');
         screen.classList.add('is-done');
         screen.setAttribute('aria-hidden', 'true');
 
         t(() => {
             screen.hidden = true;
             body.classList.remove('intro-active');
+            stopCentering();
         }, EXIT_FADE);
     }
 
     function run() {
-        // First word: just fade in slot 0 immediately.
-        applyWord(slots[0], GREETINGS[0]);
-        slots[0].classList.add('is-visible');
+        applyGreeting(GREETINGS[0]);
+        startCentering();
+        requestAnimationFrame(() => {
+            word.classList.add('is-visible');
+        });
 
-        // Schedule the remaining transitions
         for (let i = 1; i < GREETINGS.length; i++) {
             t(() => transitionTo(i), i * STEP);
         }
 
-        // End after the last word has been visible long enough
         t(endIntro, GREETINGS.length * STEP);
     }
 
     // ---- Boot -----------------------------------------------------------
-    // Wait one frame so the initial state is committed before we
-    // toggle is-ready, otherwise the fade-in would be skipped.
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+            recenter();
             screen.classList.add('is-ready');
             screen.setAttribute('aria-hidden', 'false');
             run();
         });
     });
 
-    // Safety net: if anything goes wrong, the user shouldn't be stuck
-    // on a black screen. Cap the intro at 15s.
     setTimeout(() => {
         if (!screen.hidden) endIntro();
     }, 15000);
 
-    // Expose a clean teardown in case other code wants to skip it
-    // (e.g. for a future "Skip" button).
     window.__dismissIntro = endIntro;
 
 })();

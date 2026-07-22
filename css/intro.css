@@ -1,8 +1,9 @@
 /* ============================================================
    Intro / Splash Screen
-   Apple-style crossfade: incoming word slides up + unblurs while
-   outgoing word slides up + blurs. Two stacked <h1> elements swap
-   roles on each transition. No label, no dots — just the word.
+   The word is JS-positioned at the visual center of the
+   viewport on every animation frame. This sidesteps every
+   CSS layout / iOS URL-bar / dynamic-viewport quirk that
+   could ever cause the word to drift.
    ============================================================ */
 
 body.intro-active {
@@ -14,35 +15,17 @@ body.intro-active {
     inset: 0;
     z-index: 9999;
     background: var(--bg, #04060D);
-    display: grid;
-    place-items: center;
-    opacity: 0;
-    transform: scale(1);
-    transform-origin: center center;
-    transition:
-        opacity   0.6s cubic-bezier(0.22, 1, 0.36, 1),
-        transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
     pointer-events: none;
 }
 
 .intro-screen.is-ready {
-    opacity: 1;
     pointer-events: auto;
 }
 
-.intro-screen.is-done {
-    opacity: 0;
-    transform: scale(1.08);
-    pointer-events: none;
-}
-
-/* Both words are grid items stacked in the same cell
-   (grid-area: 1 / 1) so they overlap perfectly and inherit
-   the grid's perfect centering. This avoids any
-   absolute-positioning math that could drift on mobile. */
-
 .intro-word {
-    grid-area: 1 / 1;
+    position: fixed;
+    top: 0;
+    left: 0;
     margin: 0;
     font-family: var(--font-display, 'Outfit', sans-serif);
     font-weight: 300;
@@ -50,57 +33,37 @@ body.intro-active {
     line-height: 1;
     color: var(--text, #D9E8F5);
     letter-spacing: -0.03em;
-    /* RTL scripts (Arabic) read more naturally flipped */
     unicode-bidi: plaintext;
     white-space: nowrap;
-    will-change: transform, opacity, filter;
+    text-align: center;
+    /* JS sets --cx and --cy on every frame to the visual
+       center. transform uses those custom properties so the
+       word is always perfectly centered, regardless of any
+       layout shifts or dynamic-viewport weirdness. */
+    --cx: 50vw;
+    --cy: 50vh;
+    transform: translate(var(--cx), var(--cy)) translate(-50%, -50%);
 
-    /* Default state for the "in" slot: hidden, slightly below, blurred */
-    transform: translateY(30px);
     opacity: 0;
-    filter: blur(12px);
-    transition:
-        transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-        opacity   0.7s cubic-bezier(0.22, 1, 0.36, 1),
-        filter    0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity;
+    pointer-events: none;
 }
 
-/* Non-Latin scripts get a subtle italic for variety */
+.intro-word.is-visible {
+    opacity: 1;
+}
+
 .intro-word.is-non-latin {
     font-style: italic;
 }
 
-/* Visible state: centered, sharp, full opacity */
-.intro-word.is-visible {
-    transform: translateY(0);
-    opacity: 1;
-    filter: blur(0);
-}
-
-/* Outgoing state: pushed up, faded, blurred */
-.intro-word.is-leaving {
-    transform: translateY(-30px);
-    opacity: 0;
-    filter: blur(12px);
-}
-
-/* Reduced motion: no slide or blur, just opacity */
 @media (prefers-reduced-motion: reduce) {
-    .intro-screen {
-        transition: opacity 0.2s linear;
-    }
     .intro-word {
-        /* Keep the grid cell centered by not adding any Y offset */
-        transform: none;
         transition: opacity 0.2s linear;
-        filter: none;
-    }
-    .intro-word.is-leaving {
-        transform: none;
     }
 }
 
-/* Hide the intro completely after it's been dismissed */
 .intro-screen[hidden] {
     display: none;
 }
