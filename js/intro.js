@@ -67,9 +67,8 @@
         const now = ctx.currentTime;
         const master = ctx.createGain();
         master.gain.setValueAtTime(0.0001, now);
-        // Attack then long exponential decay. Medium volume —
-        // noticeable but not startling.
-        master.gain.exponentialRampToValueAtTime(0.55, now + 0.012);
+        // Attack then long exponential decay. Louder now — was 0.55.
+        master.gain.exponentialRampToValueAtTime(1.4, now + 0.012);
         master.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
         master.connect(ctx.destination);
 
@@ -81,8 +80,8 @@
             { freq: 87,  detune:  -4, gain: 1.0 },
             { freq: 87,  detune:  +5, gain: 0.9 },
             // Higher "shimmer" partial — quieter, decays faster.
-            { freq: 174, detune:  +2, gain: 0.35 },
-            { freq: 261, detune:  -3, gain: 0.18 }
+            { freq: 174, detune:  +2, gain: 0.45 },
+            { freq: 261, detune:  -3, gain: 0.25 }
         ];
 
         partials.forEach(p => {
