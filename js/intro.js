@@ -1,9 +1,13 @@
 /* ============================================================
    Intro / Splash Screen — sequence driver
-   Single <h1>. Positioned at the visual center on every
-   frame (via the visualViewport API, so iOS URL bar and
-   dynamic-viewport quirks can't shift it). Each transition
-   = quick fade-out (text swaps while invisible) + fade-in.
+   Single <h1>, JS-positioned at the visual center on every
+   frame (visualViewport API). Each transition = quick
+   fade-out (text swaps while invisible) + fade-in, with a
+   procedurally-synthesized deep gong on each word.
+
+   Mobile browsers block autoplay, so the sequence is gated
+   behind a "Tap to enter" button — the tap counts as a
+   user gesture, unlocking the Web Audio context.
    ============================================================ */
 
 (function () {
@@ -29,30 +33,87 @@
     const STEP = prefersReducedMotion ? 600 : FADE + HOLD;
 
     // ---- DOM refs -------------------------------------------------------
-    const screen = document.getElementById('intro-screen');
-    const word   = document.getElementById('intro-word');
-    const body   = document.body;
+    const screen     = document.getElementById('intro-screen');
+    const word       = document.getElementById('intro-word');
+    const startBtn   = document.getElementById('intro-start');
+    const body       = document.body;
 
     if (!screen || !word) {
         body.classList.remove('intro-active');
         return;
     }
 
+    // ---- Audio ---------------------------------------------------------
+    // Procedurally-synthesized deep gong. No asset to load.
+    // The gong is built from two detuned sine oscillators (the
+    // "strike" + a higher partial) with a fast attack and a
+    // ~2.5s exponential decay. Sounds like a Tibetan singing
+    // bowl / temple bell — exactly the "deep gong" feel.
+    let audioCtx = null;
+
+    function ensureAudio() {
+        if (audioCtx) return audioCtx;
+        const Ctor = window.AudioContext || window.webkitAudioContext;
+        if (!Ctor) return null;
+        audioCtx = new Ctor();
+        return audioCtx;
+    }
+
+    function playGong() {
+        const ctx = ensureAudio();
+        if (!ctx) return;
+        if (ctx.state === 'suspended') ctx.resume();
+
+        const now = ctx.currentTime;
+        const master = ctx.createGain();
+        master.gain.setValueAtTime(0.0001, now);
+        // Attack then long exponential decay. Medium volume —
+        // noticeable but not startling.
+        master.gain.exponentialRampToValueAtTime(0.55, now + 0.012);
+        master.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
+        master.connect(ctx.destination);
+
+        // Fundamental — deep, around F2 (~87 Hz). The two
+        // oscillators are slightly detuned (a few Hz apart) to
+        // create the beating/wobble characteristic of a real
+        // bell — a single pure sine sounds electronic.
+        const partials = [
+            { freq: 87,  detune:  -4, gain: 1.0 },
+            { freq: 87,  detune:  +5, gain: 0.9 },
+            // Higher "shimmer" partial — quieter, decays faster.
+            { freq: 174, detune:  +2, gain: 0.35 },
+            { freq: 261, detune:  -3, gain: 0.18 }
+        ];
+
+        partials.forEach(p => {
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = p.freq;
+            osc.detune.value = p.detune;
+
+            const g = ctx.createGain();
+            g.gain.value = p.gain;
+
+            osc.connect(g);
+            g.connect(master);
+            osc.start(now);
+            osc.stop(now + 2.7);
+        });
+    }
+
     // ---- Centering ------------------------------------------------------
-    // Keep the word at the visual center on every frame. We use the
-    // visualViewport API when available (it reports the actually-
-    // visible viewport on mobile, accounting for URL bar collapse /
-    // soft keyboards), falling back to window.innerWidth/Height.
-    // This is the ONLY way to be sure the word stays put on iOS.
     function recenter() {
         const vv = window.visualViewport;
         const w  = vv ? vv.width  : window.innerWidth;
         const h  = vv ? vv.height : window.innerHeight;
-        // Use half the visual viewport as the center, so the
-        // word's translate(-50%,-50%) lands it perfectly centered
-        // even when the URL bar is partially collapsed.
-        word.style.setProperty('--cx', (w / 2) + 'px');
-        word.style.setProperty('--cy', (h / 2) + 'px');
+        const halfW = (w / 2) + 'px';
+        const halfH = (h / 2) + 'px';
+        word.style.setProperty('--cx', halfW);
+        word.style.setProperty('--cy', halfH);
+        if (startBtn) {
+            startBtn.style.setProperty('--sx', halfW);
+            startBtn.style.setProperty('--sy', halfH);
+        }
     }
 
     let centerRAF = null;
@@ -71,7 +132,6 @@
         }
     }
 
-    // Also recenter on any viewport change
     window.addEventListener('resize', recenter);
     window.addEventListener('scroll', recenter, { passive: true });
     if (window.visualViewport) {
@@ -81,6 +141,7 @@
 
     // ---- State ----------------------------------------------------------
     let timeouts = [];
+    let started  = false;
 
     const introWaiters = [];
     window.__waitForIntro = function (cb) {
@@ -94,7 +155,6 @@
     function applyGreeting(g) {
         word.textContent = g.word;
         word.classList.toggle('is-non-latin', NON_LATIN_LANGS.includes(g.lang));
-        // Text width may have changed — re-center
         recenter();
     }
 
@@ -102,6 +162,7 @@
         word.classList.remove('is-visible');
         t(() => {
             applyGreeting(GREETINGS[i]);
+            playGong();
             requestAnimationFrame(() => {
                 word.classList.add('is-visible');
             });
@@ -125,9 +186,19 @@
         }, EXIT_FADE);
     }
 
-    function run() {
+    function runSequence() {
+        if (started) return;
+        started = true;
+
+        // Hide the start button the moment the sequence begins
+        if (startBtn) {
+            startBtn.classList.remove('is-visible');
+            startBtn.style.pointerEvents = 'none';
+        }
+
+        // First word: play its gong, then fade in.
+        playGong();
         applyGreeting(GREETINGS[0]);
-        startCentering();
         requestAnimationFrame(() => {
             word.classList.add('is-visible');
         });
@@ -145,12 +216,39 @@
             recenter();
             screen.classList.add('is-ready');
             screen.setAttribute('aria-hidden', 'false');
-            run();
+
+            // Show the "Tap to enter" button. The actual
+            // sequence waits for the tap — that's the user
+            // gesture that unlocks Web Audio on mobile.
+            if (startBtn) {
+                startBtn.classList.add('is-visible');
+                const onTap = () => {
+                    startBtn.removeEventListener('click', onTap);
+                    // Prime the audio context on the same gesture.
+                    ensureAudio();
+                    runSequence();
+                };
+                startBtn.addEventListener('click', onTap);
+                // Also allow Enter / Space for keyboard users.
+                startBtn.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onTap();
+                    }
+                });
+            } else {
+                // No button in the DOM (older markup) — fall back
+                // to autoplay. On mobile this may be silent.
+                runSequence();
+            }
         });
     });
 
     setTimeout(() => {
-        if (!screen.hidden) endIntro();
+        if (!screen.hidden && !started) {
+            // User never tapped — just play the sequence without sound.
+            runSequence();
+        }
     }, 15000);
 
     window.__dismissIntro = endIntro;
