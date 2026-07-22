@@ -44,19 +44,39 @@
     }
 
     // ---- Audio ---------------------------------------------------------
-    // Procedurally-synthesized cinematic whoosh. No asset to load.
-    // White noise routed through a band-pass filter that sweeps
-    // from high (~3000 Hz) to low (~400 Hz) over ~250ms, with
-    // a quick gain swell. Sounds like the wind/transition swoosh
-    // you hear when text slides in/out in a film.
+    // Plays a pre-recorded whoosh from assets/whoosh.mp3. We keep
+    // the volume control on a WebAudio GainNode so we can tweak
+    // loudness in one place. The file is loaded once and the
+    // <audio> element is rewound to 0 on each play — that's
+    // cheap (it's a tiny file) and avoids the latency of
+    // creating a new AudioBufferSource each time.
+    const WHOOSH_SRC = 'assets/whoosh.mp3';
+    const WHOOSH_VOLUME = 0.6; // peak gain (0.0–1.0)
+
     let audioCtx = null;
+    let whooshAudio = null;        // <audio> element
+    let whooshGain  = null;        // GainNode for volume
 
     function ensureAudio() {
         if (audioCtx) return audioCtx;
         const Ctor = window.AudioContext || window.webkitAudioContext;
         if (!Ctor) return null;
         audioCtx = new Ctor();
+        whooshGain = audioCtx.createGain();
+        whooshGain.gain.value = WHOOSH_VOLUME;
+        whooshGain.connect(audioCtx.destination);
         return audioCtx;
+    }
+
+    function ensureWhooshElement() {
+        if (whooshAudio) return whooshAudio;
+        whooshAudio = new Audio(WHOOSH_SRC);
+        whooshAudio.preload = 'auto';
+        // Route through WebAudio so the GainNode controls volume.
+        // (Without this, the audio plays at full system volume
+        // and we can't tame it from JS.)
+        try { whooshAudio.crossOrigin = 'anonymous'; } catch (e) {}
+        return whooshAudio;
     }
 
     function playWhoosh() {
@@ -64,57 +84,39 @@
         if (!ctx) return;
         if (ctx.state === 'suspended') ctx.resume();
 
-        const now = ctx.currentTime;
-        const dur = 0.55; // total whoosh length (s)
+        const audio = ensureWhooshElement();
+        if (!audio) return;
 
-        // ---- Noise source ----
-        // A buffer of white noise we replay each time. Generated
-        // once on the first call (cached on the context).
-        if (!playWhoosh._buffer) {
-            const len = Math.floor(ctx.sampleRate * 1.5);
-            const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-            const data = buf.getChannelData(0);
-            for (let i = 0; i < len; i++) {
-                data[i] = Math.random() * 2 - 1;
+        // First time: connect the <audio> element to the GainNode
+        // (createMediaElementSource can only be called once per
+        // element, hence the guard).
+        if (!whooshAudio._connected) {
+            try {
+                const src = ctx.createMediaElementSource(whooshAudio);
+                src.connect(whooshGain);
+                whooshAudio._connected = true;
+            } catch (e) {
+                // If the browser refuses MediaElementSource
+                // (rare), fall back to unconnected playback —
+                // it'll play at full volume, but the whoosh
+                // still works.
+                console.warn('MediaElementSource unavailable:', e);
             }
-            playWhoosh._buffer = buf;
         }
-        const src = ctx.createBufferSource();
-        src.buffer = playWhoosh._buffer;
 
-        // ---- High-pass (kills the low "body" that made it
-        // sound like a clap) ----
-        const hp = ctx.createBiquadFilter();
-        hp.type = 'highpass';
-        hp.frequency.value = 600;
-        hp.Q.value = 0.7;
-
-        // ---- Band-pass (sweeps high → low) ----
-        // Wide Q (~0.5) so it sounds like AIR, not a tone.
-        // Starting at 5000 Hz is bright/airy, sweeping down to
-        // 800 Hz gives the smooth swoosh — not a percussive hit.
-        const bp = ctx.createBiquadFilter();
-        bp.type = 'bandpass';
-        bp.Q.value = 0.5;
-        bp.frequency.setValueAtTime(5000, now);
-        bp.frequency.exponentialRampToValueAtTime(800, now + dur);
-
-        // ---- Gain envelope ----
-        // Slower swell (90ms) so it doesn't have a sharp attack
-        // that reads as a "hit". Smooth ramp in, smooth fade.
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.6, now + 0.09);
-        gain.gain.setValueAtTime(0.6, now + dur * 0.5);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-
-        src.connect(hp);
-        hp.connect(bp);
-        bp.connect(gain);
-        gain.connect(ctx.destination);
-
-        src.start(now);
-        src.stop(now + dur + 0.05);
+        // Rewind to start and play. Setting currentTime is what
+        // makes rapid back-to-back whooshes work — without it
+        // the second one would play from wherever the first
+        // left off (or refuse to restart).
+        try { audio.currentTime = 0; } catch (e) {}
+        const p = audio.play();
+        if (p && p.catch) {
+            p.catch(err => {
+                // Autoplay was blocked, or audio failed to load.
+                // Fail silent — the intro still works visually.
+                console.warn('Whoosh playback failed:', err);
+            });
+        }
     }
 
     // ---- Centering ------------------------------------------------------
