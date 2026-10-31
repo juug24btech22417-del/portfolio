@@ -840,141 +840,219 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================
-    // ABOUT SECTION - Split Reveal + Parallax
+    // ABOUT SECTION - Cinematic Split Entrance + Scroll-Typed Terminal
     // ========================================
 
     const aboutSection = document.querySelector('.about');
     if (aboutSection) {
-        const aboutPanelLeft = aboutSection.querySelector('.about-panel-left');
+        const aboutPanelLeft  = aboutSection.querySelector('.about-panel-left');
         const aboutPanelRight = aboutSection.querySelector('.about-panel-right');
-        const parallaxBlocks = aboutSection.querySelectorAll('[data-depth]');
+        const sparkEl         = document.getElementById('about-dock-spark');
+        const parallaxBlocks  = aboutSection.querySelectorAll('[data-depth]');
+        const terminalBody    = document.getElementById('about-terminal-body');
 
-        // Split reveal animation
-        gsap.from(aboutPanelLeft, {
-            opacity: 0,
-            x: -80,
-            duration: 1,
-            ease: 'power3.out',
-            scrollTrigger: {
-                trigger: aboutSection,
-                start: 'top 65%',
-                toggleActions: 'play none none reverse'
-            }
-        });
-
-        gsap.from(aboutPanelRight, {
-            opacity: 0,
-            x: 80,
-            duration: 1,
-            delay: 0.15,
-            ease: 'power3.out',
-            scrollTrigger: {
-                trigger: aboutSection,
-                start: 'top 65%',
-                toggleActions: 'play none none reverse'
-            }
-        });
-
-        // Floating blocks entrance
+        // ---- 1. INITIAL HIDDEN STATES ----
+        gsap.set(aboutPanelLeft,  { opacity: 0, x: -90 });
+        gsap.set(aboutPanelRight, { opacity: 0, x:  90 });
         const aboutBlocks = aboutSection.querySelectorAll('.about-block, .stat-float');
-        gsap.from(aboutBlocks, {
-            opacity: 0,
-            y: 30,
-            scale: 0.95,
-            duration: 0.6,
-            stagger: 0.1,
-            delay: 0.3,
-            ease: 'back.out(1.4)',
+        gsap.set(aboutBlocks, { opacity: 0, y: 28, scale: 0.96 });
+
+        // ---- 2. SPLIT ENTRANCE ANIMATION ----
+        const entranceTl = gsap.timeline({
             scrollTrigger: {
                 trigger: aboutSection,
-                start: 'top 60%',
+                start: 'top 70%',
                 toggleActions: 'play none none reverse'
             }
         });
 
-        // Parallax mouse effect
+        entranceTl.to([aboutPanelLeft, aboutPanelRight], {
+            opacity: 1,
+            x: 0,
+            duration: 0.9,
+            ease: 'power3.out',
+            onComplete: () => {
+                if (sparkEl) {
+                    sparkEl.classList.add('is-firing');
+                    setTimeout(() => sparkEl.classList.remove('is-firing'), 750);
+                }
+            }
+        });
+
+        entranceTl.to(aboutBlocks, {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.5,
+            stagger: 0.09,
+            ease: 'back.out(1.5)'
+        }, '-=0.4');
+
+        // ---- 3. SCROLL-TYPED TERMINAL ----
+        if (terminalBody) {
+            const TERMINAL_SCRIPT = [
+                { type: 'prompt', cmd: ' whoami' },
+                { type: 'output', text: 'dhruv \u2014 full-stack developer & product builder' },
+                { type: 'spacer' },
+                { type: 'prompt', cmd: ' cat stack.json' },
+                { type: 'code', lines: [
+                    '{',
+                    '  "frontend": ["React", "Next.js", "TypeScript"],',
+                    '  "backend":  ["Node.js", "Python", "PostgreSQL"],',
+                    '  "tools":    ["Git", "Docker", "AWS"]',
+                    '}'
+                ]},
+                { type: 'spacer' },
+                { type: 'prompt', cmd: ' cat status.txt' },
+                { type: 'output', html: '<span class="status-badge">\u25cf</span> actively seeking opportunities' },
+                { type: 'spacer' },
+                { type: 'cursor' }
+            ];
+
+            const typeableTokens = [];
+
+            TERMINAL_SCRIPT.forEach(token => {
+                if (token.type === 'spacer') {
+                    const sp = document.createElement('div');
+                    sp.style.height = '8px';
+                    terminalBody.appendChild(sp);
+                    return;
+                }
+                if (token.type === 'cursor') {
+                    const line = document.createElement('div');
+                    line.className = 'term-line cursor-line';
+                    line.style.opacity = '0';
+                    line.innerHTML = '<span class="term-prompt">~</span><span class="term-blink-cursor">\u258a</span>';
+                    terminalBody.appendChild(line);
+                    typeableTokens.push({ el: line, isCursor: true });
+                    return;
+                }
+                if (token.type === 'prompt') {
+                    const line = document.createElement('div');
+                    line.className = 'term-line term-cmd-line';
+                    line.style.opacity = '0';
+                    const promptSpan = document.createElement('span');
+                    promptSpan.className = 'term-prompt';
+                    promptSpan.textContent = '~';
+                    const cmdSpan = document.createElement('span');
+                    cmdSpan.className = 'term-cmd';
+                    token.cmd.split('').forEach(ch => {
+                        const s = document.createElement('span');
+                        s.className = 'typed-char';
+                        s.textContent = ch;
+                        cmdSpan.appendChild(s);
+                    });
+                    line.appendChild(promptSpan);
+                    line.appendChild(cmdSpan);
+                    terminalBody.appendChild(line);
+                    typeableTokens.push({ el: line, chars: cmdSpan.querySelectorAll('.typed-char'), isTyped: true });
+                    return;
+                }
+                if (token.type === 'output') {
+                    const div = document.createElement('div');
+                    div.className = 'term-output-line term-output';
+                    if (token.html) div.innerHTML = token.html;
+                    else div.textContent = token.text;
+                    terminalBody.appendChild(div);
+                    typeableTokens.push({ el: div, isTyped: false });
+                    return;
+                }
+                if (token.type === 'code') {
+                    const div = document.createElement('div');
+                    div.className = 'term-code-block';
+                    div.textContent = token.lines.join('\n');
+                    terminalBody.appendChild(div);
+                    typeableTokens.push({ el: div, isTyped: false });
+                }
+            });
+
+            let terminalTriggered = false;
+            const CHAR_DELAY = 36;
+            const LINE_PAUSE = 190;
+
+            function runTerminalSequence() {
+                if (terminalTriggered) return;
+                terminalTriggered = true;
+                let delay = 350;
+
+                typeableTokens.forEach(token => {
+                    if (token.isCursor) {
+                        setTimeout(() => { token.el.style.opacity = '1'; }, delay);
+                        return;
+                    }
+                    if (token.isTyped) {
+                        setTimeout(() => { token.el.style.opacity = '1'; }, delay);
+                        delay += 80;
+                        token.chars.forEach(ch => {
+                            setTimeout(() => ch.classList.add('revealed'), delay);
+                            delay += CHAR_DELAY;
+                        });
+                        delay += LINE_PAUSE;
+                    } else {
+                        setTimeout(() => token.el.classList.add('revealed'), delay);
+                        delay += LINE_PAUSE + 60;
+                    }
+                });
+            }
+
+            const termObs = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) {
+                        runTerminalSequence();
+                        termObs.disconnect();
+                    }
+                });
+            }, { threshold: 0.25 });
+            termObs.observe(aboutSection);
+        }
+
+        // ---- 4. PARALLAX MOUSE EFFECT ----
         const parallaxContainer = document.getElementById('parallax-container');
         if (parallaxContainer && !window.matchMedia('(pointer: coarse)').matches) {
             aboutSection.addEventListener('mousemove', (e) => {
                 const rect = aboutSection.getBoundingClientRect();
                 const x = (e.clientX - rect.left) / rect.width - 0.5;
                 const y = (e.clientY - rect.top) / rect.height - 0.5;
-
                 parallaxBlocks.forEach(block => {
                     const depth = parseFloat(block.dataset.depth) || 0.3;
-                    const moveX = x * depth * 30;
-                    const moveY = y * depth * 30;
-                    block.style.transform = `translate(${moveX}px, ${moveY}px)`;
+                    block.style.transform = `translate(${x * depth * 30}px, ${y * depth * 30}px)`;
                 });
             });
-
             aboutSection.addEventListener('mouseleave', () => {
-                parallaxBlocks.forEach(block => {
-                    block.style.transform = 'translate(0, 0)';
-                });
+                parallaxBlocks.forEach(b => b.style.transform = 'translate(0, 0)');
             });
         }
 
-        // Terminal line reveal
-        const termLines = aboutSection.querySelectorAll('.term-line, .term-output, .term-code');
-        termLines.forEach((line, i) => {
-            gsap.from(line, {
-                opacity: 0,
-                x: -20,
-                duration: 0.4,
-                delay: 0.5 + (i * 0.1),
-                ease: 'power2.out',
-                scrollTrigger: {
-                    trigger: aboutSection,
-                    start: 'top 60%',
-                    toggleActions: 'play none none reverse'
-                }
-            });
-        });
-
-        // Stat counter animation
+        // ---- 5. STAT COUNTERS WITH SUFFIX ----
         const statNums = aboutSection.querySelectorAll('.stat-num');
         statNums.forEach(stat => {
             const target = parseInt(stat.dataset.target);
-            ScrollTrigger.create({
-                trigger: stat,
-                start: 'top 80%',
-                onEnter: () => {
-                    gsap.to(stat, {
-                        textContent: target,
-                        duration: 1.5,
-                        snap: { textContent: 1 },
-                        ease: 'power2.out'
-                    });
-                },
-                once: true
-            });
-        });
-
-        // Stat counter animation
-        const statNumbers = aboutSection.querySelectorAll('.stat-number');
-        statNumbers.forEach(stat => {
-            const target = parseInt(stat.dataset.target);
-
+            const suffix = stat.dataset.suffix || '';
+            let triggered = false;
             ScrollTrigger.create({
                 trigger: stat,
                 start: 'top 85%',
                 onEnter: () => {
+                    if (triggered) return;
+                    triggered = true;
                     let current = 0;
-                    const increment = target / 30;
-                    const counter = setInterval(() => {
+                    const steps = 40;
+                    const increment = target / steps;
+                    const tick = setInterval(() => {
                         current += increment;
                         if (current >= target) {
-                            stat.textContent = target;
-                            clearInterval(counter);
+                            stat.textContent = target + suffix;
+                            clearInterval(tick);
                         } else {
-                            stat.textContent = Math.floor(current);
+                            stat.textContent = Math.floor(current) + suffix;
                         }
-                    }, 30);
+                    }, 35);
                 }
             });
         });
     }
+
+
 
     // ========================================
     // EDUCATION SECTION - HORIZONTAL WARP STATION DECK

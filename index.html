@@ -468,9 +468,16 @@
         </div>
     </section>
 
-    <!-- About Section - Split Reveal with Floating Blocks -->
+    <!-- About Section - Split Reveal with Scroll-Typed Terminal -->
     <section class="about" id="about">
         <div class="section-label">04 / ABOUT</div>
+
+        <!-- Docking spark burst fires when panels collide -->
+        <div class="about-dock-spark" id="about-dock-spark" aria-hidden="true">
+            <div class="spark-ring spark-ring-1"></div>
+            <div class="spark-ring spark-ring-2"></div>
+            <div class="spark-ring spark-ring-3"></div>
+        </div>
 
         <div class="about-container">
             <!-- Left Panel - Floating Bio Blocks -->
@@ -493,22 +500,22 @@
 
                     <div class="about-stats-float">
                         <div class="stat-float" data-depth="0.3">
-                            <span class="stat-num" data-target="5">0</span>
+                            <span class="stat-num" data-target="15" data-suffix="+">0</span>
                             <span class="stat-name">Projects</span>
                         </div>
                         <div class="stat-float" data-depth="0.5">
-                            <span class="stat-num" data-target="1">0</span>
-                            <span class="stat-name">Hackathon</span>
+                            <span class="stat-num" data-target="10" data-suffix="+">0</span>
+                            <span class="stat-name">Hackathons</span>
                         </div>
                         <div class="stat-float" data-depth="0.7">
-                            <span class="stat-num" data-target="2">0</span>
+                            <span class="stat-num" data-target="3">0</span>
                             <span class="stat-name">Years</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Panel - Terminal -->
+            <!-- Right Panel - Scroll-Typed Terminal -->
             <div class="about-panel about-panel-right">
                 <div class="terminal-v2">
                     <div class="terminal-header-v2">
@@ -519,35 +526,8 @@
                         </div>
                         <span class="terminal-title-v2">about — zsh</span>
                     </div>
-                    <div class="terminal-body-v2">
-                        <div class="term-line">
-                            <span class="term-prompt">~</span>
-                            <span class="term-cmd"> whoami</span>
-                        </div>
-                        <div class="term-output">dhruv — full-stack developer & product builder</div>
-
-                        <div class="term-line">
-                            <span class="term-prompt">~</span>
-                            <span class="term-cmd"> cat stack.json</span>
-                        </div>
-                        <div class="term-code">
-{
-  "frontend": ["React", "Next.js", "TypeScript"],
-  "backend": ["Node.js", "Python", "PostgreSQL"],
-  "tools": ["Git", "Docker", "AWS"]
-}
-                        </div>
-
-                        <div class="term-line">
-                            <span class="term-prompt">~</span>
-                            <span class="term-cmd"> cat status.txt</span>
-                        </div>
-                        <div class="term-output"><span class="status-badge">●</span> actively seeking opportunities</div>
-
-                        <div class="term-line cursor-line">
-                            <span class="term-prompt">~</span>
-                            <span class="term-cursor">▊</span>
-                        </div>
+                    <div class="terminal-body-v2" id="about-terminal-body">
+                        <!-- Lines are built and typed by JS -->
                     </div>
                 </div>
             </div>
