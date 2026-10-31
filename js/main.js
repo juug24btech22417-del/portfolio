@@ -506,6 +506,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // and reverse scrub preserves 100% lockstep alignment!
         const HOLD_DURATION = 0.8;
         const TRANS_DURATION = 1.0;
+        const totalDuration = (total - 1) * (HOLD_DURATION + TRANS_DURATION) + HOLD_DURATION + 0.2;
+
+        // Dynamic transition midpoints normalized to [0, 1]
+        const transitionMidpoints = [];
+        for (let i = 0; i < total - 1; i++) {
+            const tMid = (i + 1) * HOLD_DURATION + i * TRANS_DURATION + (TRANS_DURATION / 2);
+            transitionMidpoints.push(tMid / totalDuration);
+        }
+
+        // Project plateau centers normalized to [0, 1] for instant dot-nav jumping
+        const projectPlateauProgress = [];
+        for (let i = 0; i < total; i++) {
+            const tCenter = i * (HOLD_DURATION + TRANS_DURATION) + (HOLD_DURATION / 2);
+            projectPlateauProgress.push(tCenter / totalDuration);
+        }
 
         const workDeckTl = gsap.timeline({
             scrollTrigger: {
@@ -523,15 +538,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         scrubProgress.style.width = `${Math.min(100, Math.max(5, p * 100))}%`;
                     }
 
-                    // Accurate active index based on timeline transition midpoints
-                    // Total duration = (total - 1) * (HOLD + TRANS) + HOLD
-                    // For 4 items: (3 * 1.8) + 0.8 = 6.2s total
-                    // Midpoints at t = 1.3 (p = 0.21), t = 3.1 (p = 0.50), t = 4.9 (p = 0.79)
+                    // Accurate active index based on dynamic timeline transition midpoints
                     let activeIdx = 0;
-                    if (p < 0.21) activeIdx = 0;
-                    else if (p < 0.50) activeIdx = 1;
-                    else if (p < 0.79) activeIdx = 2;
-                    else activeIdx = 3;
+                    for (let i = 0; i < transitionMidpoints.length; i++) {
+                        if (p >= transitionMidpoints[i]) {
+                            activeIdx = i + 1;
+                        }
+                    }
 
                     syncActiveState(activeIdx);
                 }
@@ -546,9 +559,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update dot indicators
             dotBtns.forEach((dot, i) => dot.classList.toggle('is-active', i === idx));
 
-            // Update project counter (01 / 04)
+            // Update project counter (01 / 06)
             if (counterCurrent) {
                 counterCurrent.textContent = String(idx + 1).padStart(2, '0');
+            }
+            const counterTotal = document.querySelector('.deck-counter-total');
+            if (counterTotal) {
+                counterTotal.textContent = String(total).padStart(2, '0');
             }
 
             // Update ambient halo glow
@@ -621,13 +638,12 @@ document.addEventListener('DOMContentLoaded', () => {
         syncActiveState(0);
 
         // Dot button click → scroll to project rest center
-        const projectPlateauProgress = [0.06, 0.35, 0.65, 0.94];
         dotBtns.forEach((btn) => {
             btn.addEventListener('click', () => {
                 const pIdx = parseInt(btn.dataset.project || '0');
                 const st = workDeckTl.scrollTrigger;
                 if (!st) return;
-                const targetScroll = st.start + (st.end - st.start) * projectPlateauProgress[pIdx];
+                const targetScroll = st.start + (st.end - st.start) * (projectPlateauProgress[pIdx] || 0);
                 if (window.lenis) {
                     window.lenis.scrollTo(targetScroll, { duration: 1.2 });
                 } else {
