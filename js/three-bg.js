@@ -18,16 +18,100 @@
     // Initial camera position - move back so we can see things in front
     camera.position.z = 30;
 
-    // Scroll state
+    // Scroll state & cinematic camera choreography
     let scrollProgress = 0;
+    let targetProgress = 0;
+    let scrollVelocity = 0;
+    let lastScrollY = window.scrollY;
+    let lastScrollTime = performance.now();
     let mouseX = 0;
     let mouseY = 0;
 
-    // Listen for scroll
-    window.addEventListener('scroll', () => {
+    // Active project accent color for cosmic nebula illumination
+    const currentAccentColor = new THREE.Vector3(0.4, 0.6, 0.9);
+    const targetAccentColor = new THREE.Vector3(0.4, 0.6, 0.9);
+
+    // Compute 3D camera flight path across sections
+    function getFlightTrajectory(p) {
+        let x = 0, y = 0, z = 30, rotX = 0, rotY = 0;
+        if (p < 0.15) {
+            // Sector 01: Hero (gentle float forward)
+            const t = Math.max(0, p / 0.15);
+            z = 30 - t * 8; // 30 -> 22
+            x = Math.sin(t * Math.PI) * 1.5;
+            y = 0;
+            rotY = -0.02 * t;
+        } else if (p < 0.48) {
+            // Sector 02: Work / Pinned 3D Deck (wide panoramic stage view)
+            const t = (p - 0.15) / 0.33;
+            z = 22 - t * 7; // 22 -> 15
+            x = 3.5 * Math.sin(t * Math.PI);
+            y = -1.5 * t;
+            rotY = -0.05 * Math.sin(t * Math.PI);
+            rotX = 0.02 * t;
+        } else if (p < 0.72) {
+            // Sector 03: Skills (elevated planetary orbital plane)
+            const t = (p - 0.48) / 0.24;
+            z = 15 + t * 7; // pull back slightly to frame orbits: 15 -> 22
+            y = 7 * t;      // elevated viewpoint looking down
+            x = -3 * t;
+            rotX = -0.22 * t; // tilt downward into solar system
+            rotY = 0.04 * t;
+        } else if (p < 0.88) {
+            // Sector 04: About & Terminal (dive through nebula core)
+            const t = (p - 0.72) / 0.16;
+            z = 22 - t * 34; // 22 -> -12
+            y = 7 * (1 - t);
+            x = -3 * (1 - t);
+            rotX = -0.22 * (1 - t);
+        } else {
+            // Sector 05: Contact / Deep space
+            const t = (p - 0.88) / 0.12;
+            z = -12 - t * 24; // -12 -> -36
+            x = 0;
+            y = 0;
+            rotX = 0;
+            rotY = 0;
+        }
+        return { x, y, z, rotX, rotY };
+    }
+
+    // Listen for scroll & compute velocity for warp impulse
+    function onScrollUpdate() {
         const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-        scrollProgress = window.scrollY / docHeight;
-    }, { passive: true });
+        targetProgress = docHeight > 0 ? window.scrollY / docHeight : 0;
+        
+        const now = performance.now();
+        const dt = Math.max(16, now - lastScrollTime);
+        const dy = Math.abs(window.scrollY - lastScrollY);
+        scrollVelocity = Math.min(1.0, (dy / dt) * 0.12);
+        
+        lastScrollY = window.scrollY;
+        lastScrollTime = now;
+    }
+
+    window.addEventListener('scroll', onScrollUpdate, { passive: true });
+
+    // Expose control API for Lenis & GSAP ScrollTrigger
+    window.__spaceBg = {
+        setScrollProgress: (val) => {
+            targetProgress = Math.max(0, Math.min(1, val));
+            scrollProgress = targetProgress;
+        },
+        setAccentColor: (hexStr) => {
+            // Parse hex color into RGB 0-1
+            const hex = hexStr.replace('#', '');
+            if (hex.length === 6) {
+                const r = parseInt(hex.substring(0, 2), 16) / 255;
+                const g = parseInt(hex.substring(2, 4), 16) / 255;
+                const b = parseInt(hex.substring(4, 6), 16) / 255;
+                targetAccentColor.set(r, g, b);
+            }
+        },
+        setWarpVelocity: (v) => {
+            scrollVelocity = Math.min(1.0, Math.max(0, v));
+        }
+    };
 
     // Mouse tracking
     document.addEventListener('mousemove', (e) => {
@@ -100,10 +184,10 @@
         return stars;
     }
 
-    // Create 3 star layers
-    const farStars = createStarLayer(4000, 0.6, 0.5, 0.00005, 200);
-    const midStars = createStarLayer(1500, 1.0, 0.7, 0.00012, 150);
-    const nearStars = createStarLayer(400, 1.8, 1.0, 0.0002, 100);
+    // Create 3 star layers - balanced, elegant count (not overcrowded)
+    const farStars = createStarLayer(1200, 0.5, 0.45, 0.00005, 200);
+    const midStars = createStarLayer(450, 0.85, 0.65, 0.0001, 150);
+    const nearStars = createStarLayer(100, 1.4, 0.85, 0.00018, 100);
 
     scene.add(farStars);
     scene.add(midStars);
@@ -390,67 +474,63 @@
     }
 
     // ========================================
-    // LAYER 3: SHOOTING STARS
+    // LAYER 3: NATURAL SHOOTING STARS
+    // Only one single star at a time, sweeps once every ~10s
     // ========================================
 
     const shootingStars = [];
-    const maxShootingStars = 10;
 
     function createShootingStar() {
-        // Create geometry with TWO line segments for thickness
+        // Single, realistic shooting star streak (head and tail)
         const geometry = new THREE.BufferGeometry();
-        // 4 points: head, mid1, mid2, tail (making it a thicker line)
-        const positions = new Float32Array(12);
+        const positions = new Float32Array(6);
 
-        // Spawn from top-center of visible area
-        const startX = (Math.random() - 0.5) * 40; // -20 to +20
-        const startY = 15 + Math.random() * 10; // Upper area
-        const startZ = 0; // Same Z as stars
+        // Spawn high in the sky across wide natural area
+        const startX = (Math.random() - 0.5) * 60 + 5;
+        const startY = 16 + Math.random() * 10;
+        const startZ = -5 + Math.random() * 12;
 
-        const trailLength = 20;
-        const angle = -Math.PI / 4; // 45 degrees down-left
+        const trailLength = 16 + Math.random() * 8;
+        // Natural diagonal trajectory (~ -45 degrees)
+        const angle = -Math.PI / 4 + (Math.random() - 0.5) * 0.15;
 
-        // Calculate trail points
-        const tailX = startX + Math.cos(angle) * trailLength;
-        const tailY = startY + Math.sin(angle) * trailLength;
+        // Tail extends backwards along angle
+        const tailX = startX - Math.cos(angle) * trailLength;
+        const tailY = startY - Math.sin(angle) * trailLength;
 
-        // Create thick line by drawing two parallel lines
-        const thickness = 0.3;
-        const perpX = Math.sin(angle) * thickness;
-        const perpY = -Math.cos(angle) * thickness;
+        // Head (bright point)
+        positions[0] = startX;
+        positions[1] = startY;
+        positions[2] = startZ;
 
-        // Line 1
-        positions[0] = startX + perpX; positions[1] = startY + perpY; positions[2] = startZ;
-        positions[3] = tailX + perpX; positions[4] = tailY + perpY; positions[5] = startZ;
-        // Line 2
-        positions[6] = startX - perpX; positions[7] = startY - perpY; positions[8] = startZ;
-        positions[9] = tailX - perpX; positions[10] = tailY - perpY; positions[11] = startZ;
+        // Tail (fading end)
+        positions[3] = tailX;
+        positions[4] = tailY;
+        positions[5] = startZ;
 
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-        // Bright white colors for all points
-        const colors = new Float32Array(12);
-        // Line 1 - head bright, tail dim
+        // Colors: brilliant white head fading to soft ethereal blue-white tail
+        const colors = new Float32Array(6);
+        // Head: bright white nucleus
         colors[0] = 1.0; colors[1] = 1.0; colors[2] = 1.0;
-        colors[3] = 0.3; colors[4] = 0.6; colors[5] = 1.0;
-        // Line 2 - same
-        colors[6] = 1.0; colors[7] = 1.0; colors[8] = 1.0;
-        colors[9] = 0.3; colors[10] = 0.6; colors[11] = 1.0;
+        // Tail: soft celestial cyan-blue fade
+        colors[3] = 0.25; colors[4] = 0.5; colors[5] = 0.9;
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
         const material = new THREE.LineBasicMaterial({
             vertexColors: true,
             transparent: true,
-            opacity: 1,
+            opacity: 0,
             blending: THREE.AdditiveBlending
         });
 
-        const line = new THREE.LineSegments(geometry, material);
+        const line = new THREE.Line(geometry, material);
 
         line.userData = {
             life: 0,
-            maxLife: 80,
-            speed: 0.6,
+            maxLife: 60,
+            speed: 0.85,
             active: true,
             angle: angle
         };
@@ -459,36 +539,28 @@
     }
 
     function spawnShootingStar() {
-        console.log('Attempting to spawn star, current count:', shootingStars.length);
-
-        // Remove old stars if too many
-        if (shootingStars.length >= maxShootingStars) {
-            const old = shootingStars.shift();
-            scene.remove(old);
-            old.geometry.dispose();
-            old.material.dispose();
-            console.log('Removed old star');
-        }
+        // Guarantee strictly only one falling star at a time
+        if (shootingStars.length > 0) return;
 
         const star = createShootingStar();
         shootingStars.push(star);
         scene.add(star);
-        console.log('New star spawned at:', star.geometry.attributes.position.array.slice(0, 3));
     }
 
-    // Spawn shooting stars more frequently
-    function startShootingStars() {
-        // Initial spawn
-        setTimeout(() => spawnShootingStar(), 500);
-        // Regular interval
-        setInterval(() => {
+    // Schedule natural appearances once every ~10 seconds
+    function scheduleShootingStars() {
+        const nextInterval = 9500 + Math.random() * 1500; // ~10 seconds
+        setTimeout(() => {
             spawnShootingStar();
-        }, 2000);
+            scheduleShootingStars();
+        }, nextInterval);
     }
 
-    // Start after a short delay
-    setTimeout(startShootingStars, 1000);
-    console.log('Shooting star system initialized');
+    // First appearance after 4 seconds
+    setTimeout(() => {
+        spawnShootingStar();
+        scheduleShootingStars();
+    }, 4000);
 
 
     // ========================================
@@ -529,20 +601,7 @@
     const constellationPoints = new THREE.Points(constellationGeometry, constellationMaterial);
     scene.add(constellationPoints);
 
-    // Lines for constellation connections
-    const linesGeometry = new THREE.BufferGeometry();
-    const maxConnections = constellationCount * 3;
-    const linesPositions = new Float32Array(maxConnections * 2 * 3);
-    linesGeometry.setAttribute('position', new THREE.BufferAttribute(linesPositions, 3));
-
-    const linesMaterial = new THREE.LineBasicMaterial({
-        color: 0x4A6080,  // Muted blue-gray
-        transparent: true,
-        opacity: 0.15
-    });
-
-    const constellationLines = new THREE.LineSegments(linesGeometry, linesMaterial);
-    scene.add(constellationLines);
+    // Constellation lines: removed per user request so only standalone stars shine
 
     // ========================================
     // ANIMATION LOOP
@@ -556,20 +615,31 @@
         const time = clock.getElapsedTime();
         const delta = clock.getDelta();
 
-        // Camera scroll movement (0 to -80 over full scroll)
-        const targetZ = -scrollProgress * 80;
-        camera.position.z += (targetZ - camera.position.z) * 0.05;
+        // Smooth scroll progress interpolation
+        scrollProgress += (targetProgress - scrollProgress) * 0.08;
+        scrollVelocity *= 0.92; // Natural deceleration
 
-        // Rotate star layers
-        farStars.rotation.y += farStars.userData.speed;
-        midStars.rotation.y += midStars.userData.speed;
-        nearStars.rotation.y += nearStars.userData.speed;
+        // Compute 3D flight trajectory along cosmic spline
+        const traj = getFlightTrajectory(scrollProgress);
+        camera.position.x += (traj.x - camera.position.x) * 0.05;
+        camera.position.y += (traj.y - camera.position.y) * 0.05;
+        camera.position.z += (traj.z - camera.position.z) * 0.05;
+        camera.rotation.x += (traj.rotX - camera.rotation.x) * 0.05;
+        camera.rotation.y += (traj.rotY - camera.rotation.y) * 0.05;
 
-        // Mouse parallax for near stars (very subtle)
+        // Gentle warp speed impulse when scrolling
+        const warpBoost = 1.0 + scrollVelocity * 1.8;
+
+        // Rotate star layers with warp dynamics
+        farStars.rotation.y += farStars.userData.speed * warpBoost;
+        midStars.rotation.y += midStars.userData.speed * warpBoost;
+        nearStars.rotation.y += nearStars.userData.speed * warpBoost;
+
+        // Mouse parallax for near stars
         nearStars.rotation.x = mouseY * 0.003;
         nearStars.rotation.y += nearStars.userData.speed + mouseX * 0.003;
 
-        // Update nebula clouds with realistic gas effect
+        // Update nebula clouds with realistic gas effect (original curated palettes preserved)
         nebulas.forEach((nebula, i) => {
             const data = nebula.userData;
 
@@ -597,7 +667,7 @@
             nebula.position.z = data.originalPos.z + scrollProgress * 30;
         });
 
-        // Update shooting stars
+        // Update shooting stars (strictly one natural streak)
         for (let i = shootingStars.length - 1; i >= 0; i--) {
             const star = shootingStars[i];
             const data = star.userData;
@@ -614,40 +684,39 @@
             const dx = Math.cos(angle) * speed;
             const dy = Math.sin(angle) * speed;
 
-            // Move all 4 points (2 lines)
-            for (let j = 0; j < 4; j++) {
-                positions[j * 3] += dx;
-                positions[j * 3 + 1] += dy;
-            }
+            // Move head and tail along realistic streak vector
+            positions[0] += dx;
+            positions[1] += dy;
+            positions[3] += dx;
+            positions[4] += dy;
 
             star.geometry.attributes.position.needsUpdate = true;
 
-            // Fade out near end of life
-            if (data.life > data.maxLife - 20) {
+            // Natural fade-in and graceful fade-out
+            if (data.life <= 10) {
+                star.material.opacity = data.life / 10;
+            } else if (data.life > data.maxLife - 20) {
                 star.material.opacity = (data.maxLife - data.life) / 20;
+            } else {
+                star.material.opacity = 0.95;
             }
 
-            // Remove dead stars
+            // Remove dead stars and dispose resources
             if (data.life >= data.maxLife) {
                 scene.remove(star);
+                star.geometry.dispose();
+                star.material.dispose();
                 shootingStars.splice(i, 1);
             }
         }
 
-        // Update constellation - mouse repulsion
+        // Update constellation stars - mouse repulsion (no connecting lines between stars)
         const positions = constellationPoints.geometry.attributes.position.array;
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2(mouseX, mouseY);
-
-        // Map mouse to a point in 3D space
         const vector = new THREE.Vector3(mouseX, mouseY, 0.5);
         vector.unproject(camera);
         const dir = vector.sub(camera.position).normalize();
         const distance = -camera.position.z / dir.z;
         const mouse3D = camera.position.clone().add(dir.multiplyScalar(distance));
-
-        let lineIndex = 0;
-        const linesPos = constellationLines.geometry.attributes.position.array;
 
         for (let i = 0; i < constellationCount; i++) {
             const i3 = i * 3;
@@ -675,44 +744,12 @@
             // Apply velocity
             positions[i3] += original.vx;
             positions[i3 + 1] += original.vy;
-
-            // Draw connections
-            let connections = 0;
-            for (let j = i + 1; j < constellationCount; j++) {
-                if (connections >= 3) break;
-
-                const j3 = j * 3;
-                const distTo = Math.sqrt(
-                    Math.pow(positions[i3] - positions[j3], 2) +
-                    Math.pow(positions[i3 + 1] - positions[j3 + 1], 2) +
-                    Math.pow(positions[i3 + 2] - positions[j3 + 2], 2)
-                );
-
-                if (distTo < 8) {
-                    const li6 = lineIndex * 6;
-                    linesPos[li6] = positions[i3];
-                    linesPos[li6 + 1] = positions[i3 + 1];
-                    linesPos[li6 + 2] = positions[i3 + 2];
-                    linesPos[li6 + 3] = positions[j3];
-                    linesPos[li6 + 4] = positions[j3 + 1];
-                    linesPos[li6 + 5] = positions[j3 + 2];
-                    lineIndex++;
-                    connections++;
-                }
-            }
-        }
-
-        // Clear unused lines
-        for (let i = lineIndex * 6; i < maxConnections * 6; i++) {
-            linesPos[i] = 0;
         }
 
         constellationPoints.geometry.attributes.position.needsUpdate = true;
-        constellationLines.geometry.attributes.position.needsUpdate = true;
 
         // Adjust constellation opacity based on scroll
         constellationPoints.material.opacity = 0.8 - scrollProgress * 0.3;
-        constellationLines.material.opacity = 0.15 - scrollProgress * 0.1;
 
         renderer.render(scene, camera);
     }

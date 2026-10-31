@@ -20,6 +20,135 @@ document.addEventListener('DOMContentLoaded', () => {
     function initPortfolio() {
 
     // ========================================
+    // SMOOTH SCROLLING ENGINE (LENIS)
+    // ========================================
+    let lenis = null;
+    if (typeof Lenis !== 'undefined') {
+        lenis = new Lenis({
+            duration: 1.2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            orientation: 'vertical',
+            gestureOrientation: 'vertical',
+            smoothWheel: true,
+            wheelMultiplier: 0.95,
+            touchMultiplier: 1.6
+        });
+
+        lenis.on('scroll', (e) => {
+            ScrollTrigger.update();
+            if (window.__spaceBg && typeof window.__spaceBg.setWarpVelocity === 'function') {
+                window.__spaceBg.setWarpVelocity(Math.abs(e.velocity || 0) * 0.05);
+            }
+        });
+
+        gsap.ticker.add((time) => {
+            lenis.raf(time * 1000);
+        });
+        gsap.ticker.lagSmoothing(0);
+        window.lenis = lenis;
+    }
+
+    // ========================================
+    // DYNAMIC MAGNETIC CURSOR
+    // ========================================
+    const cursorDot = document.getElementById('cursor-dot');
+    const cursorRing = document.getElementById('cursor-ring');
+    const cursorLabel = document.getElementById('cursor-label');
+
+    if (cursorDot && cursorRing && !window.matchMedia('(pointer: coarse)').matches) {
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let ringX = mouseX;
+        let ringY = mouseY;
+        let targetScale = 1;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursorDot.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
+        }, { passive: true });
+
+        function renderCursor() {
+            ringX += (mouseX - ringX) * 0.16;
+            ringY += (mouseY - ringY) * 0.16;
+            cursorRing.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) scale(${targetScale})`;
+            requestAnimationFrame(renderCursor);
+        }
+        renderCursor();
+
+        function bindCursorHover(selector, labelText, scale) {
+            document.querySelectorAll(selector).forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                    cursorRing.classList.add('is-hovered');
+                    const text = el.getAttribute('data-cursor') || labelText;
+                    if (text) {
+                        cursorRing.classList.add('has-label');
+                        if (cursorLabel) cursorLabel.textContent = text;
+                        targetScale = scale || 2.4;
+                    } else {
+                        cursorRing.classList.remove('has-label');
+                        if (cursorLabel) cursorLabel.textContent = '';
+                        targetScale = scale || 1.6;
+                    }
+                });
+                el.addEventListener('mouseleave', () => {
+                    cursorRing.classList.remove('is-hovered', 'has-label');
+                    if (cursorLabel) cursorLabel.textContent = '';
+                    targetScale = 1;
+                });
+            });
+        }
+
+        bindCursorHover('a, button, .btn', '', 1.8);
+        bindCursorHover('.holo-card', 'VIEW', 2.6);
+        bindCursorHover('.skill-node', 'EXPLORE', 2.4);
+        bindCursorHover('.profile-card', 'ABOUT', 2.0);
+        bindCursorHover('#copy-email', 'COPY', 2.0);
+        bindCursorHover('.terminal-v2', 'RUN', 2.0);
+    }
+
+    // ========================================
+    // SCI-FI MISSION TELEMETRY HUD
+    // ========================================
+    const hudSector = document.getElementById('hud-sector');
+    const hudTelemetryVal = document.getElementById('hud-telemetry-val');
+
+    const telemetrySectors = [
+        { id: 'hero', name: '01 // HOME' },
+        { id: 'work', name: '02 // SELECTED WORK' },
+        { id: 'skills', name: '03 // EXPERTISE' },
+        { id: 'about', name: '04 // PROFILE' },
+        { id: 'education', name: '05 // TIMELINE' },
+        { id: 'contact', name: '06 // CONTACT' }
+    ];
+
+    window.addEventListener('scroll', () => {
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = docHeight > 0 ? window.scrollY / docHeight : 0;
+
+        if (hudSector) {
+            const scrollMid = window.scrollY + window.innerHeight * 0.4;
+            for (let sec of telemetrySectors) {
+                const el = document.getElementById(sec.id);
+                if (el) {
+                    const top = el.offsetTop;
+                    const bottom = top + el.offsetHeight;
+                    if (scrollMid >= top && scrollMid < bottom) {
+                        hudSector.textContent = sec.name;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (hudTelemetryVal) {
+            const vel = window.lenis ? (Math.abs(window.lenis.velocity || 0) * 0.08) : 0;
+            const alt = Math.max(12, Math.round(400 - progress * 375));
+            hudTelemetryVal.textContent = `VEL ${vel.toFixed(1)} KM/S · ALT ${alt} KM`;
+        }
+    }, { passive: true });
+
+    // ========================================
     // SCROLL PROGRESS BAR
     // ========================================
     const scrollProgress = document.querySelector('.scroll-progress');
@@ -293,149 +422,312 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ========================================
-    // WORK SECTION ANIMATIONS
+    // APPLE-STYLE SCRUBBED TEXT ILLUMINATION
     // ========================================
+    const scrubTexts = document.querySelectorAll('.scrub-text');
+    scrubTexts.forEach(el => {
+        const text = el.textContent.trim();
+        const words = text.split(/\s+/);
+        el.innerHTML = words.map(w => `<span class="scrub-word">${w}&nbsp;</span>`).join('');
 
-    // Project rows reveal
-    const projectRows = document.querySelectorAll('.project-row');
-    projectRows.forEach((row, i) => {
-        const isLeft = row.dataset.side === 'left';
-        const content = row.querySelector('.project-content');
-        const visual = row.querySelector('.project-visual');
-        const border = row.querySelector('.project-border');
+        const wordSpans = el.querySelectorAll('.scrub-word');
+        gsap.fromTo(wordSpans, 
+            { opacity: 0.18, filter: 'blur(1.5px)', color: '#475569' },
+            {
+                opacity: 1,
+                filter: 'blur(0px)',
+                color: '#FFFFFF',
+                textShadow: '0 0 16px rgba(255,255,255,0.7)',
+                stagger: 0.05,
+                scrollTrigger: {
+                    trigger: el,
+                    start: 'top 85%',
+                    end: 'bottom 55%',
+                    scrub: 0.8
+                }
+            }
+        );
+    });
 
-        const tl = gsap.timeline({
-            scrollTrigger: {
-                trigger: row,
-                start: 'top 80%',
-                end: 'top 50%',
-                toggleActions: 'play none none reverse'
+    // ========================================
+    // WORK SECTION - SYNCHRONIZED SCROLLYTELLING DECK
+    // ========================================
+    const pinnedWorkWrap = document.getElementById('work-pinned-wrap');
+    if (pinnedWorkWrap) {
+        const infoCards = pinnedWorkWrap.querySelectorAll('.deck-info-card');
+        const holoCards = pinnedWorkWrap.querySelectorAll('.holo-card');
+        const dotBtns = document.querySelectorAll('.deck-dot');
+        const halo = document.getElementById('deck-halo');
+        const counterCurrent = document.getElementById('deck-counter-current');
+        const scrubProgress = document.getElementById('deck-scrub-progress');
+        const total = holoCards.length;
+
+        // Pull per-card accent colors from data-accent
+        const projectAccents = Array.from(holoCards).map(card => {
+            const bar = card.querySelector('.card-accent-bar');
+            return bar ? bar.dataset.accent : '#8B9FD4';
+        });
+
+        holoCards.forEach(card => {
+            const bar = card.querySelector('.card-accent-bar');
+            if (bar) bar.style.color = bar.dataset.accent;
+        });
+
+        // Set initial visual states for all elements
+        infoCards.forEach((card, i) => {
+            if (i === 0) {
+                gsap.set(card, { opacity: 1, y: 0, pointerEvents: 'auto' });
+            } else {
+                gsap.set(card, { opacity: 0, y: 30, pointerEvents: 'none' });
             }
         });
 
-        // Text slide from appropriate side
-        tl.from(content, {
-            opacity: 0,
-            x: isLeft ? -50 : 50,
-            duration: 0.8,
-            ease: 'power2.out'
-        }, 0);
+        holoCards.forEach((card, i) => {
+            if (i === 0) {
+                gsap.set(card, {
+                    x: 0, y: 0, z: 0,
+                    rotateY: 0, rotateX: 0,
+                    opacity: 1, scale: 1,
+                    pointerEvents: 'auto'
+                });
+            } else {
+                gsap.set(card, {
+                    x: 40, y: 60, z: -200,
+                    rotateY: -12, rotateX: -6,
+                    opacity: 0, scale: 0.92,
+                    pointerEvents: 'none'
+                });
+            }
+        });
 
-        // Visual slide from opposite side
-        tl.from(visual, {
-            opacity: 0,
-            x: isLeft ? 50 : -50,
-            duration: 0.8,
-            ease: 'power2.out'
-        }, 0);
+        // Build Master Timeline with Guaranteed Rest Plateaus:
+        // Each transition takes 1.0s, each hold/plateau takes 0.8s
+        // This ensures the user can read each project without slipping,
+        // and reverse scrub preserves 100% lockstep alignment!
+        const HOLD_DURATION = 0.8;
+        const TRANS_DURATION = 1.0;
 
-        // Border clip-path wipe
-        if (border) {
-            tl.from(border, {
-                scaleX: 0,
-                transformOrigin: 'left',
-                duration: 0.6,
-                ease: 'power2.inOut'
-            }, 0.2);
+        const workDeckTl = gsap.timeline({
+            scrollTrigger: {
+                trigger: pinnedWorkWrap,
+                pin: true,
+                scrub: 0.8,
+                start: 'top top',
+                end: `+=${total * 120}%`,
+                anticipatePin: 1,
+                onUpdate: (self) => {
+                    const p = self.progress;
+
+                    // Progress bar scrub width
+                    if (scrubProgress) {
+                        scrubProgress.style.width = `${Math.min(100, Math.max(5, p * 100))}%`;
+                    }
+
+                    // Accurate active index based on timeline transition midpoints
+                    // Total duration = (total - 1) * (HOLD + TRANS) + HOLD
+                    // For 4 items: (3 * 1.8) + 0.8 = 6.2s total
+                    // Midpoints at t = 1.3 (p = 0.21), t = 3.1 (p = 0.50), t = 4.9 (p = 0.79)
+                    let activeIdx = 0;
+                    if (p < 0.21) activeIdx = 0;
+                    else if (p < 0.50) activeIdx = 1;
+                    else if (p < 0.79) activeIdx = 2;
+                    else activeIdx = 3;
+
+                    syncActiveState(activeIdx);
+                }
+            }
+        });
+
+        let currentActiveIdx = -1;
+        function syncActiveState(idx) {
+            if (idx === currentActiveIdx) return;
+            currentActiveIdx = idx;
+
+            // Update dot indicators
+            dotBtns.forEach((dot, i) => dot.classList.toggle('is-active', i === idx));
+
+            // Update project counter (01 / 04)
+            if (counterCurrent) {
+                counterCurrent.textContent = String(idx + 1).padStart(2, '0');
+            }
+
+            // Update ambient halo glow
+            if (halo) {
+                halo.style.setProperty('--halo-accent', projectAccents[idx] || '#8B9FD4');
+            }
+
+            // Pointer events toggle so clicks always hit the active card
+            infoCards.forEach((c, i) => c.style.pointerEvents = (i === idx ? 'auto' : 'none'));
+            holoCards.forEach((c, i) => c.style.pointerEvents = (i === idx ? 'auto' : 'none'));
         }
-    });
 
-    // Project visual 3D tilt effect
-    const browserFrames = document.querySelectorAll('.browser-frame');
-    browserFrames.forEach(frame => {
-        frame.addEventListener('mousemove', (e) => {
-            const rect = frame.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            const rotateX = (y - centerY) / centerY * -6;
-            const rotateY = (x - centerX) / centerX * 6;
+        // Populate master timeline with synced transitions
+        let cursorTime = HOLD_DURATION; // Initial hold on Project 0
 
-            frame.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-        });
+        for (let i = 0; i < total - 1; i++) {
+            const nextIdx = i + 1;
+            const tStart = cursorTime;
 
-        frame.addEventListener('mouseleave', () => {
-            frame.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
-        });
-    });
+            // 1. Current Info card floats up and fades
+            workDeckTl.to(infoCards[i], {
+                y: -24,
+                opacity: 0,
+                duration: TRANS_DURATION * 0.85,
+                ease: 'power2.inOut'
+            }, tStart);
 
-    // Project row left border hover
-    projectRows.forEach(row => {
-        const content = row.querySelector('.project-content');
+            // 2. Current Holo card drifts away in 3D perspective
+            workDeckTl.to(holoCards[i], {
+                x: -36,
+                y: -44,
+                z: -240,
+                rotateY: 14,
+                rotateX: 6,
+                opacity: 0,
+                scale: 0.88,
+                duration: TRANS_DURATION,
+                ease: 'power2.inOut'
+            }, tStart);
 
-        row.addEventListener('mouseenter', () => {
-            gsap.to(content, {
-                borderLeftWidth: 4,
-                borderLeftColor: '#E2E8F0',
-                paddingLeft: 24,
-                duration: 0.3,
-                ease: 'power2.out'
+            // 3. Next Info card rises from bottom
+            workDeckTl.to(infoCards[nextIdx], {
+                y: 0,
+                opacity: 1,
+                duration: TRANS_DURATION * 0.85,
+                ease: 'power2.inOut'
+            }, tStart + 0.15);
+
+            // 4. Next Holo card arrives from depth into crisp focus
+            workDeckTl.to(holoCards[nextIdx], {
+                x: 0,
+                y: 0,
+                z: 0,
+                rotateY: 0,
+                rotateX: 0,
+                opacity: 1,
+                scale: 1,
+                duration: TRANS_DURATION,
+                ease: 'power2.inOut'
+            }, tStart + 0.1);
+
+            // Hold on the incoming project
+            cursorTime += TRANS_DURATION + HOLD_DURATION;
+        }
+
+        // Add small final cushion so last card stays solidly locked
+        workDeckTl.to({}, { duration: 0.2 });
+
+        // Initialize state
+        syncActiveState(0);
+
+        // Dot button click → scroll to project rest center
+        const projectPlateauProgress = [0.06, 0.35, 0.65, 0.94];
+        dotBtns.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const pIdx = parseInt(btn.dataset.project || '0');
+                const st = workDeckTl.scrollTrigger;
+                if (!st) return;
+                const targetScroll = st.start + (st.end - st.start) * projectPlateauProgress[pIdx];
+                if (window.lenis) {
+                    window.lenis.scrollTo(targetScroll, { duration: 1.2 });
+                } else {
+                    window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                }
             });
         });
 
-        row.addEventListener('mouseleave', () => {
-            gsap.to(content, {
-                borderLeftWidth: 0,
-                paddingLeft: 0,
-                duration: 0.3,
-                ease: 'power2.out'
+        // Interactive 3D Holographic Tilt + Specular Sheen on hover
+        holoCards.forEach(card => {
+            const inner = card.querySelector('.holo-card-inner');
+            const media = card.querySelector('.holo-card-media');
+
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const rx = ((y - rect.height / 2) / rect.height) * -8;
+                const ry = ((x - rect.width / 2) / rect.width) * 8;
+
+                card.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.02, 1.02, 1.02)`;
+
+                // Dynamic specular light reflection
+                if (inner) {
+                    const px = (x / rect.width) * 100;
+                    const py = (y / rect.height) * 100;
+                    inner.style.backgroundImage = `radial-gradient(circle at ${px}% ${py}%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 60%)`;
+                }
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = '';
+                if (inner) inner.style.backgroundImage = '';
             });
         });
-    });
+    }
+
 
     // ========================================
-    // SKILLS SECTION - SOLAR SYSTEM
+    // SKILLS SECTION - PINNED ORBITAL SCRUB
     // ========================================
-
+    const skillsWrap = document.getElementById('skills-pinned-wrap');
     const skillsSection = document.querySelector('.skills');
     const solarSystem = document.querySelector('.solar-system');
     const skillNodes = document.querySelectorAll('.skill-node');
     const skillDetail = document.querySelector('.skill-detail');
     const detailName = document.querySelector('.skill-detail-name');
     const orbitTracks = document.querySelectorAll('.orbit-track');
+    const phaseSteps = document.querySelectorAll('.skills-phase-step');
 
-    if (skillsSection && solarSystem) {
-        // Solar system entrance animation
-        gsap.from('.sun', {
-            scale: 0,
-            opacity: 0,
-            duration: 1,
-            ease: 'back.out(1.7)',
+    if (skillsWrap) {
+        const sun = skillsWrap.querySelector('.sun');
+        const innerRing = skillsWrap.querySelector('.orbit-inner');
+        const midRing = skillsWrap.querySelector('.orbit-middle');
+        const outerRing = skillsWrap.querySelector('.orbit-outer');
+
+        // Helper: update which phase step is active
+        function setPhaseStep(idx) {
+            phaseSteps.forEach((step, i) => step.classList.toggle('is-active', i === idx));
+        }
+
+        // Pinned scrollytelling timeline for skills
+        const skillsTl = gsap.timeline({
             scrollTrigger: {
-                trigger: skillsSection,
-                start: 'top 75%',
-                toggleActions: 'play none none reverse'
+                trigger: skillsWrap,
+                pin: true,
+                scrub: 0.8,
+                start: 'top top',
+                end: '+=180%',
+                anticipatePin: 1,
+                onUpdate: (self) => {
+                    const p = self.progress;
+                    if (p < 0.35) setPhaseStep(0);
+                    else if (p < 0.70) setPhaseStep(1);
+                    else setPhaseStep(2);
+                }
             }
         });
 
-        // Orbit rings fade in with stagger
-        gsap.from('.orbit-ring', {
-            opacity: 0,
-            scale: 0.8,
-            duration: 0.8,
-            stagger: 0.2,
-            ease: 'power2.out',
-            scrollTrigger: {
-                trigger: skillsSection,
-                start: 'top 70%',
-                toggleActions: 'play none none reverse'
-            }
-        });
+        // Sun & Inner Ring
+        skillsTl.fromTo(sun,
+            { scale: 0.4, opacity: 0.3 },
+            { scale: 1.15, opacity: 1, duration: 0.4, ease: 'back.out(1.5)' }, 0
+        );
+        skillsTl.fromTo(innerRing,
+            { scale: 0.5, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.4)' }, 0.1
+        );
 
-        // Skill nodes entrance
-        gsap.from('.skill-node', {
-            opacity: 0,
-            scale: 0,
-            duration: 0.5,
-            stagger: 0.05,
-            ease: 'back.out(1.5)',
-            scrollTrigger: {
-                trigger: skillsSection,
-                start: 'top 60%',
-                toggleActions: 'play none none reverse'
-            }
-        });
+        // Middle Ring
+        skillsTl.fromTo(midRing,
+            { scale: 0.6, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.4)' }, 0.4
+        );
+
+        // Outer Ring
+        skillsTl.fromTo(outerRing,
+            { scale: 0.7, opacity: 0 },
+            { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(1.4)' }, 0.8
+        );
 
         // Skill node hover with circular progress
         const progressRing = document.querySelector('.progress-ring-fill');
@@ -669,55 +961,141 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================
-    // EDUCATION SECTION ANIMATIONS
+    // EDUCATION SECTION - HORIZONTAL WARP STATION DECK
     // ========================================
+    const eduPinnedWrap = document.getElementById('edu-pinned-wrap');
+    const eduTrack = document.getElementById('edu-track');
 
-    const educationSection = document.querySelector('.education');
-    if (educationSection) {
-        // Timeline line draw
-        const timelineProgress = educationSection.querySelector('.timeline-progress');
-        if (timelineProgress) {
-            gsap.to(timelineProgress, {
-                strokeDashoffset: 0,
-                ease: 'none',
-                scrollTrigger: {
-                    trigger: educationSection,
-                    start: 'top 70%',
-                    end: 'bottom 50%',
-                    scrub: true
-                }
-            });
+    if (eduPinnedWrap && eduTrack) {
+        const eduCards = eduTrack.querySelectorAll('.edu-card');
+        const eduStepNodes = document.querySelectorAll('.edu-step-node');
+        const dockIndicatorText = document.getElementById('edu-indicator-text');
+        const railProgress = document.getElementById('edu-rail-progress');
+        const railVal = document.getElementById('edu-rail-val');
+        const ambientGlow = document.getElementById('edu-ambient-glow');
+
+        const stationMeta = [
+            { name: 'STATION 01 // FOUNDATION', accent: '#38BDF8' },
+            { name: 'STATION 02 // ACCELERATION', accent: '#38BDF8' },
+            { name: 'STATION 03 // 3RD YEAR (ACTIVE MISSION)', accent: '#38BDF8' },
+            { name: 'STATION 04 // SPECIALIZATIONS', accent: '#38BDF8' }
+        ];
+
+        let currentEduStep = -1;
+        function setEduStep(idx) {
+            if (idx === currentEduStep) return;
+            currentEduStep = idx;
+
+            eduStepNodes.forEach((node, i) => node.classList.toggle('is-active', i === idx));
+            eduCards.forEach((c, i) => c.classList.toggle('is-active-card', i === idx));
+
+            if (dockIndicatorText && stationMeta[idx]) {
+                dockIndicatorText.textContent = stationMeta[idx].name;
+            }
+
+            if (ambientGlow && stationMeta[idx]) {
+                ambientGlow.style.setProperty('--edu-glow-color', stationMeta[idx].accent);
+            }
         }
 
-        // Timeline nodes scale in
-        const timelineNodes = educationSection.querySelectorAll('.timeline-node');
-        timelineNodes.forEach((node, i) => {
-            const content = node.querySelector('.node-content');
+        // Horizontal Warp Scrub Animation
+        function getScrollAmount() {
+            return -(eduTrack.scrollWidth - window.innerWidth);
+        }
 
-            ScrollTrigger.create({
-                trigger: node,
-                start: 'top 80%',
-                onEnter: () => {
-                    setTimeout(() => {
-                        content.classList.add('visible');
-                    }, i * 200);
+        const eduTl = gsap.timeline({
+            scrollTrigger: {
+                trigger: eduPinnedWrap,
+                pin: true,
+                scrub: 0.8,
+                start: 'top top',
+                end: () => `+=${eduTrack.scrollWidth}`,
+                invalidateOnRefresh: true,
+                onUpdate: (self) => {
+                    const p = self.progress;
+
+                    // Progress rail updates
+                    if (railProgress) railProgress.style.width = `${Math.min(100, Math.max(8, p * 100))}%`;
+                    if (railVal) railVal.textContent = `${Math.round(p * 100)}% DISPATCHED`;
+
+                    // Find closest card to the viewport center
+                    let activeDock = 0;
+                    let minDiff = Infinity;
+                    const screenMid = window.innerWidth / 2;
+
+                    eduCards.forEach((card, idx) => {
+                        const rect = card.getBoundingClientRect();
+                        const cardCenter = rect.left + rect.width / 2;
+                        const diff = Math.abs(cardCenter - screenMid);
+
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            activeDock = idx;
+                        }
+
+                        // Proximity interpolation: center card is 1.0 opacity & scale, outer cards fade & tilt
+                        const norm = (cardCenter - screenMid) / (window.innerWidth * 0.55);
+                        const clamped = Math.max(-1, Math.min(1, norm));
+                        const opacity = Math.max(0.3, 1 - Math.abs(clamped) * 0.65);
+                        const scale = 1 - Math.abs(clamped) * 0.08;
+                        const rotY = clamped * -10;
+
+                        card.style.opacity = opacity.toFixed(3);
+                        card.style.transform = `perspective(1000px) rotateY(${rotY.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+                    });
+
+                    setEduStep(activeDock);
+                }
+            }
+        });
+
+        // Translate the track horizontally
+        eduTl.to(eduTrack, {
+            x: getScrollAmount,
+            ease: 'none',
+            duration: 1
+        });
+
+        // Initialize state
+        setEduStep(0);
+
+        // Stepper click → smooth scroll to dock
+        const dockProgressPoints = [0.0, 0.33, 0.67, 1.0];
+        eduStepNodes.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const sIdx = parseInt(btn.dataset.step || '0');
+                const st = eduTl.scrollTrigger;
+                if (!st) return;
+                const targetScroll = st.start + (st.end - st.start) * dockProgressPoints[sIdx];
+                if (window.lenis) {
+                    window.lenis.scrollTo(targetScroll, { duration: 1.3 });
+                } else {
+                    window.scrollTo({ top: targetScroll, behavior: 'smooth' });
                 }
             });
         });
 
-        // Certifications fade in
-        const certPills = educationSection.querySelectorAll('.cert-pill');
-        gsap.from(certPills, {
-            opacity: 0,
-            y: 20,
-            duration: 0.5,
-            stagger: 0.1,
-            ease: 'power2.out',
-            scrollTrigger: {
-                trigger: '.certifications',
-                start: 'top 85%',
-                toggleActions: 'play none none reverse'
-            }
+        // Interactive 3D tilt & sheen on card hover
+        eduCards.forEach(card => {
+            const glass = card.querySelector('.edu-card-glass');
+
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const rx = ((y - rect.height / 2) / rect.height) * -6;
+                const ry = ((x - rect.width / 2) / rect.width) * 6;
+
+                if (glass) {
+                    const px = (x / rect.width) * 100;
+                    const py = (y / rect.height) * 100;
+                    glass.style.backgroundImage = `radial-gradient(circle at ${px}% ${py}%, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 65%)`;
+                }
+            });
+
+            card.addEventListener('mouseleave', () => {
+                if (glass) glass.style.backgroundImage = '';
+            });
         });
     }
 
@@ -824,15 +1202,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function(e) {
             const href = this.getAttribute('href');
-            if (href === '#') return;
+            if (href === '#' || !href) return;
 
             e.preventDefault();
             const target = document.querySelector(href);
             if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
+                if (window.lenis) {
+                    window.lenis.scrollTo(target, { offset: -20, duration: 1.4 });
+                } else {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
             }
         });
     });
@@ -841,10 +1223,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollIndicator = document.querySelector('.scroll-indicator');
     if (scrollIndicator) {
         scrollIndicator.addEventListener('click', () => {
-            document.getElementById('work').scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
+            const target = document.getElementById('work');
+            if (target) {
+                if (window.lenis) {
+                    window.lenis.scrollTo(target, { offset: 0, duration: 1.4 });
+                } else {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            }
         });
     }
 
