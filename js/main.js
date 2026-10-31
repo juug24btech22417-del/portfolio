@@ -1178,10 +1178,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const ambientGlow = document.getElementById('edu-ambient-glow');
 
         const stationMeta = [
-            { name: 'STATION 01 // FOUNDATION', accent: '#38BDF8' },
-            { name: 'STATION 02 // ACCELERATION', accent: '#38BDF8' },
-            { name: 'STATION 03 // 3RD YEAR (ACTIVE MISSION)', accent: '#38BDF8' },
-            { name: 'STATION 04 // SPECIALIZATIONS', accent: '#38BDF8' }
+            { name: 'STATION 01 // FOUNDATION', accent: 'rgba(255, 255, 255, 0.4)' },
+            { name: 'STATION 02 // ACCELERATION', accent: 'rgba(255, 255, 255, 0.4)' },
+            { name: 'STATION 03 // 3RD YEAR (ACTIVE MISSION)', accent: 'rgba(255, 255, 255, 0.4)' },
+            { name: 'STATION 04 // SPECIALIZATIONS', accent: 'rgba(255, 255, 255, 0.4)' }
         ];
 
         let currentEduStep = -1;
