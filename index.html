@@ -470,64 +470,79 @@
 
     <!-- About Section - Split Reveal with Scroll-Typed Terminal -->
     <section class="about" id="about">
-        <div class="section-label">04 / ABOUT</div>
+        <div class="about-pinned-wrap" id="about-pinned-wrap">
+            <div class="section-label">04 / ABOUT</div>
 
-        <!-- Docking spark burst fires when panels collide -->
-        <div class="about-dock-spark" id="about-dock-spark" aria-hidden="true">
-            <div class="spark-ring spark-ring-1"></div>
-            <div class="spark-ring spark-ring-2"></div>
-            <div class="spark-ring spark-ring-3"></div>
-        </div>
+            <!-- Docking spark burst fires when panels collide -->
+            <div class="about-dock-spark" id="about-dock-spark" aria-hidden="true">
+                <div class="spark-core"></div>
+                <div class="spark-beam-h"></div>
+                <div class="spark-beam-v"></div>
+                <div class="spark-ring spark-ring-1"></div>
+                <div class="spark-ring spark-ring-2"></div>
+                <div class="spark-ring spark-ring-3"></div>
+            </div>
 
-        <div class="about-container">
-            <!-- Left Panel - Floating Bio Blocks -->
-            <div class="about-panel about-panel-left">
-                <div class="about-blocks-container" id="parallax-container">
-                    <div class="about-block block-1" data-depth="0.2">
-                        <div class="block-glow"></div>
-                        <p class="scrub-text">Full Stack Developer who thrives at the intersection of code and product.</p>
-                    </div>
-
-                    <div class="about-block block-2" data-depth="0.4">
-                        <div class="block-glow"></div>
-                        <p class="scrub-text">I love turning complex problems into elegant solutions.</p>
-                    </div>
-
-                    <div class="about-block block-3" data-depth="0.6">
-                        <div class="block-glow"></div>
-                        <p class="scrub-text">From system architecture to UI polish — craft and intention in every detail.</p>
-                    </div>
-
-                    <div class="about-stats-float">
-                        <div class="stat-float" data-depth="0.3">
-                            <span class="stat-num" data-target="15" data-suffix="+">0</span>
-                            <span class="stat-name">Projects</span>
+            <div class="about-container">
+                <!-- Left Panel - Floating Bio Blocks -->
+                <div class="about-panel about-panel-left">
+                    <div class="about-blocks-container" id="parallax-container">
+                        <div class="about-block block-1" data-depth="0.2">
+                            <div class="block-glow"></div>
+                            <div class="block-tag"><span class="block-tag-dot"></span>01 // PHILOSOPHY</div>
+                            <p class="scrub-text">Full Stack Developer who thrives at the intersection of code and product.</p>
                         </div>
-                        <div class="stat-float" data-depth="0.5">
-                            <span class="stat-num" data-target="10" data-suffix="+">0</span>
-                            <span class="stat-name">Hackathons</span>
+
+                        <div class="about-block block-2" data-depth="0.4">
+                            <div class="block-glow"></div>
+                            <div class="block-tag"><span class="block-tag-dot"></span>02 // APPROACH</div>
+                            <p class="scrub-text">I love turning complex problems into elegant solutions.</p>
                         </div>
-                        <div class="stat-float" data-depth="0.7">
-                            <span class="stat-num" data-target="3">0</span>
-                            <span class="stat-name">Years</span>
+
+                        <div class="about-block block-3" data-depth="0.6">
+                            <div class="block-glow"></div>
+                            <div class="block-tag"><span class="block-tag-dot"></span>03 // CRAFT</div>
+                            <p class="scrub-text">From system architecture to UI polish — craft and intention in every detail.</p>
+                        </div>
+
+                        <div class="about-stats-float">
+                            <div class="stat-float" data-depth="0.3">
+                                <span class="stat-num" data-target="15" data-suffix="+">0</span>
+                                <span class="stat-name">Projects</span>
+                            </div>
+                            <div class="stat-float" data-depth="0.5">
+                                <span class="stat-num" data-target="10" data-suffix="+">0</span>
+                                <span class="stat-name">Hackathons</span>
+                            </div>
+                            <div class="stat-float" data-depth="0.7">
+                                <span class="stat-num" data-target="3">0</span>
+                                <span class="stat-name">Years</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Right Panel - Scroll-Typed Terminal -->
-            <div class="about-panel about-panel-right">
-                <div class="terminal-v2">
-                    <div class="terminal-header-v2">
-                        <div class="terminal-controls">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                <!-- Right Panel - Scroll-Typed Terminal -->
+                <div class="about-panel about-panel-right">
+                    <div class="terminal-v2">
+                        <div class="terminal-header-v2">
+                            <div class="terminal-controls">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                            <div class="terminal-title-wrap">
+                                <span class="terminal-tab-icon">⚡</span>
+                                <span class="terminal-title-v2">dhruv@terminal: ~ (zsh)</span>
+                            </div>
+                            <div class="terminal-status-pill">
+                                <span class="term-status-dot"></span>
+                                <span>ONLINE</span>
+                            </div>
                         </div>
-                        <span class="terminal-title-v2">about — zsh</span>
-                    </div>
-                    <div class="terminal-body-v2" id="about-terminal-body">
-                        <!-- Lines are built and typed by JS -->
+                        <div class="terminal-body-v2" id="about-terminal-body">
+                            <!-- Lines are built and typed by JS -->
+                        </div>
                     </div>
                 </div>
             </div>

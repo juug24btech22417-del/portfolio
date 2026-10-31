@@ -840,216 +840,325 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================
-    // ABOUT SECTION - Cinematic Split Entrance + Scroll-Typed Terminal
+    // ABOUT SECTION - PINNED SCROLLYTELLING + 3D WARP ENTRANCE + SCROLL-TYPED TERMINAL
     // ========================================
 
-    const aboutSection = document.querySelector('.about');
-    if (aboutSection) {
-        const aboutPanelLeft  = aboutSection.querySelector('.about-panel-left');
-        const aboutPanelRight = aboutSection.querySelector('.about-panel-right');
+    const aboutPinnedWrap = document.getElementById('about-pinned-wrap');
+    const aboutSection    = document.querySelector('.about');
+
+    if (aboutPinnedWrap && aboutSection) {
+        const aboutPanelLeft  = aboutPinnedWrap.querySelector('.about-panel-left');
+        const aboutPanelRight = aboutPinnedWrap.querySelector('.about-panel-right');
         const sparkEl         = document.getElementById('about-dock-spark');
-        const parallaxBlocks  = aboutSection.querySelectorAll('[data-depth]');
+        const sparkCore       = sparkEl ? sparkEl.querySelector('.spark-core') : null;
+        const sparkBeamH      = sparkEl ? sparkEl.querySelector('.spark-beam-h') : null;
+        const sparkBeamV      = sparkEl ? sparkEl.querySelector('.spark-beam-v') : null;
+        const sparkRings      = sparkEl ? sparkEl.querySelectorAll('.spark-ring') : [];
+        const bioBlocks       = aboutPinnedWrap.querySelectorAll('.about-block');
+        const statCards       = aboutPinnedWrap.querySelectorAll('.stat-float');
         const terminalBody    = document.getElementById('about-terminal-body');
 
-        // ---- 1. INITIAL HIDDEN STATES ----
-        gsap.set(aboutPanelLeft,  { opacity: 0, x: -90 });
-        gsap.set(aboutPanelRight, { opacity: 0, x:  90 });
-        const aboutBlocks = aboutSection.querySelectorAll('.about-block, .stat-float');
-        gsap.set(aboutBlocks, { opacity: 0, y: 28, scale: 0.96 });
+        // ---- 1. BUILD TERMINAL DOM ----
+        if (terminalBody) {
+            terminalBody.innerHTML = `
+                <!-- CMD 1 -->
+                <div class="term-row term-cmd-row" id="term-cmd-1">
+                    <span class="term-prompt">~</span>
+                    <span class="term-cmd">
+                        <span class="term-char">w</span><span class="term-char">h</span><span class="term-char">o</span><span class="term-char">a</span><span class="term-char">m</span><span class="term-char">i</span>
+                    </span>
+                    <span class="term-cursor" id="term-cur-1">█</span>
+                </div>
+                <div class="term-row term-output-row" id="term-out-1">
+                    <div class="term-output-text">
+                        <span class="term-badge-tag">[IDENTITY]</span>
+                        <span class="term-highlight">dhruv</span> — full-stack developer & product builder
+                    </div>
+                </div>
 
-        // ---- 2. SPLIT ENTRANCE ANIMATION ----
-        const entranceTl = gsap.timeline({
+                <!-- CMD 2 -->
+                <div class="term-row term-cmd-row" id="term-cmd-2">
+                    <span class="term-prompt">~</span>
+                    <span class="term-cmd">
+                        <span class="term-char">c</span><span class="term-char">a</span><span class="term-char">t</span><span class="term-char">&nbsp;</span><span class="term-char">s</span><span class="term-char">t</span><span class="term-char">a</span><span class="term-char">c</span><span class="term-char">k</span><span class="term-char">.</span><span class="term-char">j</span><span class="term-char">s</span><span class="term-char">o</span><span class="term-char">n</span>
+                    </span>
+                    <span class="term-cursor" id="term-cur-2">█</span>
+                </div>
+                <div class="term-row term-output-row" id="term-out-2">
+                    <pre class="term-code-block">{
+  <span class="code-key">"frontend"</span>: [<span class="code-str">"React"</span>, <span class="code-str">"Next.js"</span>, <span class="code-str">"TypeScript"</span>],
+  <span class="code-key">"backend"</span>:  [<span class="code-str">"Node.js"</span>, <span class="code-str">"Python"</span>, <span class="code-str">"PostgreSQL"</span>],
+  <span class="code-key">"tools"</span>:    [<span class="code-str">"Git"</span>, <span class="code-str">"Docker"</span>, <span class="code-str">"AWS"</span>]
+}</pre>
+                </div>
+
+                <!-- CMD 3 -->
+                <div class="term-row term-cmd-row" id="term-cmd-3">
+                    <span class="term-prompt">~</span>
+                    <span class="term-cmd">
+                        <span class="term-char">c</span><span class="term-char">a</span><span class="term-char">t</span><span class="term-char">&nbsp;</span><span class="term-char">s</span><span class="term-char">t</span><span class="term-char">a</span><span class="term-char">t</span><span class="term-char">u</span><span class="term-char">s</span><span class="term-char">.</span><span class="term-char">t</span><span class="term-char">x</span><span class="term-char">t</span>
+                    </span>
+                    <span class="term-cursor" id="term-cur-3">█</span>
+                </div>
+                <div class="term-row term-output-row" id="term-out-3">
+                    <div class="term-output-status">
+                        <span class="term-radar-pulse"></span>
+                        <span class="term-status-text">actively seeking opportunities</span>
+                    </div>
+                </div>
+
+                <!-- IDLE BLINK CURSOR -->
+                <div class="term-row term-idle-row" id="term-idle">
+                    <span class="term-prompt">~</span>
+                    <span class="term-cursor term-blink-cursor">█</span>
+                </div>
+            `;
+        }
+
+        const cmd1 = document.getElementById('term-cmd-1');
+        const out1 = document.getElementById('term-out-1');
+        const cur1 = document.getElementById('term-cur-1');
+        const cmd1Chars = cmd1 ? cmd1.querySelectorAll('.term-char') : [];
+
+        const cmd2 = document.getElementById('term-cmd-2');
+        const out2 = document.getElementById('term-out-2');
+        const cur2 = document.getElementById('term-cur-2');
+        const cmd2Chars = cmd2 ? cmd2.querySelectorAll('.term-char') : [];
+
+        const cmd3 = document.getElementById('term-cmd-3');
+        const out3 = document.getElementById('term-out-3');
+        const cur3 = document.getElementById('term-cur-3');
+        const cmd3Chars = cmd3 ? cmd3.querySelectorAll('.term-char') : [];
+
+        const termIdle = document.getElementById('term-idle');
+
+        // ---- 2. INITIAL HIDDEN STATES ----
+        gsap.set(aboutPanelLeft, {
+            opacity: 0,
+            x: -160,
+            z: -140,
+            rotateY: -22,
+            rotateX: 6,
+            scale: 0.86,
+            filter: 'blur(10px)',
+            transformPerspective: 1400
+        });
+
+        gsap.set(aboutPanelRight, {
+            opacity: 0,
+            x: 160,
+            z: -140,
+            rotateY: 22,
+            rotateX: -6,
+            scale: 0.86,
+            filter: 'blur(10px)',
+            transformPerspective: 1400
+        });
+
+        gsap.set(bioBlocks, {
+            opacity: 0,
+            y: 40,
+            scale: 0.92
+        });
+
+        gsap.set(statCards, {
+            opacity: 0,
+            scale: 0.6,
+            y: -24
+        });
+
+        if (sparkEl) gsap.set(sparkEl, { opacity: 0 });
+        if (sparkCore) gsap.set(sparkCore, { scale: 0, opacity: 0 });
+        if (sparkBeamH) gsap.set(sparkBeamH, { scaleX: 0, opacity: 0 });
+        if (sparkBeamV) gsap.set(sparkBeamV, { scaleY: 0, opacity: 0 });
+        if (sparkRings.length) gsap.set(sparkRings, { scale: 0, opacity: 0 });
+
+        gsap.set([cmd1, out1, cmd2, out2, cmd3, out3, termIdle], { opacity: 0, display: 'none' });
+        gsap.set([...cmd1Chars, ...cmd2Chars, ...cmd3Chars], { display: 'none', opacity: 0 });
+        if (cur1) gsap.set(cur1, { display: 'none' });
+        if (cur2) gsap.set(cur2, { display: 'none' });
+        if (cur3) gsap.set(cur3, { display: 'none' });
+
+        // Target stats: Projects: 15+, Hackathons: 10+, Years: 3
+        const statProjectsEl = aboutPinnedWrap.querySelector('.stat-float:nth-child(1) .stat-num');
+        const statHacksEl    = aboutPinnedWrap.querySelector('.stat-float:nth-child(2) .stat-num');
+        const statYearsEl    = aboutPinnedWrap.querySelector('.stat-float:nth-child(3) .stat-num');
+        const statProxy = { projects: 0, hacks: 0, years: 0 };
+
+        // ---- 3. PINNED SCROLLYTELLING TIMELINE ----
+        const aboutTl = gsap.timeline({
             scrollTrigger: {
-                trigger: aboutSection,
-                start: 'top 70%',
-                toggleActions: 'play none none reverse'
+                trigger: aboutPinnedWrap,
+                pin: true,
+                scrub: 0.7,
+                start: 'top top',
+                end: '+=1600',
+                anticipatePin: 1,
+                invalidateOnRefresh: true
             }
         });
 
-        entranceTl.to([aboutPanelLeft, aboutPanelRight], {
+        // 3A. 3D Warp Flight of both panels colliding into center
+        aboutTl.to(aboutPanelLeft, {
             opacity: 1,
             x: 0,
-            duration: 0.9,
-            ease: 'power3.out',
-            onComplete: () => {
-                if (sparkEl) {
-                    sparkEl.classList.add('is-firing');
-                    setTimeout(() => sparkEl.classList.remove('is-firing'), 750);
-                }
-            }
-        });
+            z: 0,
+            rotateY: 0,
+            rotateX: 0,
+            scale: 1,
+            filter: 'blur(0px)',
+            duration: 0.8,
+            ease: 'power3.out'
+        }, 0);
 
-        entranceTl.to(aboutBlocks, {
+        aboutTl.to(aboutPanelRight, {
+            opacity: 1,
+            x: 0,
+            z: 0,
+            rotateY: 0,
+            rotateX: 0,
+            scale: 1,
+            filter: 'blur(0px)',
+            duration: 0.8,
+            ease: 'power3.out'
+        }, 0);
+
+        // 3B. Docking Spark Collision Shockwave
+        if (sparkEl) {
+            aboutTl.set(sparkEl, { opacity: 1 }, 0.65);
+            if (sparkCore) {
+                aboutTl.fromTo(sparkCore,
+                    { scale: 0, opacity: 1 },
+                    { scale: 2.6, opacity: 0, duration: 0.45, ease: 'power2.out' },
+                    0.65
+                );
+            }
+            if (sparkBeamH) {
+                aboutTl.fromTo(sparkBeamH,
+                    { scaleX: 0, opacity: 1 },
+                    { scaleX: 1.8, opacity: 0, duration: 0.4, ease: 'power2.out' },
+                    0.66
+                );
+            }
+            if (sparkBeamV) {
+                aboutTl.fromTo(sparkBeamV,
+                    { scaleY: 0, opacity: 1 },
+                    { scaleY: 1.8, opacity: 0, duration: 0.4, ease: 'power2.out' },
+                    0.66
+                );
+            }
+            if (sparkRings.length) {
+                aboutTl.fromTo(sparkRings,
+                    { scale: 0, opacity: 1 },
+                    { scale: 1.9, opacity: 0, stagger: 0.08, duration: 0.55, ease: 'power2.out' },
+                    0.68
+                );
+            }
+        }
+
+        // 3C. Bio Blocks & Stat Pods Fly In
+        aboutTl.to(bioBlocks, {
             opacity: 1,
             y: 0,
             scale: 1,
-            duration: 0.5,
-            stagger: 0.09,
+            duration: 0.45,
+            stagger: 0.1,
             ease: 'back.out(1.5)'
-        }, '-=0.4');
+        }, 0.72);
 
-        // ---- 3. SCROLL-TYPED TERMINAL ----
-        if (terminalBody) {
-            const TERMINAL_SCRIPT = [
-                { type: 'prompt', cmd: ' whoami' },
-                { type: 'output', text: 'dhruv \u2014 full-stack developer & product builder' },
-                { type: 'spacer' },
-                { type: 'prompt', cmd: ' cat stack.json' },
-                { type: 'code', lines: [
-                    '{',
-                    '  "frontend": ["React", "Next.js", "TypeScript"],',
-                    '  "backend":  ["Node.js", "Python", "PostgreSQL"],',
-                    '  "tools":    ["Git", "Docker", "AWS"]',
-                    '}'
-                ]},
-                { type: 'spacer' },
-                { type: 'prompt', cmd: ' cat status.txt' },
-                { type: 'output', html: '<span class="status-badge">\u25cf</span> actively seeking opportunities' },
-                { type: 'spacer' },
-                { type: 'cursor' }
-            ];
+        aboutTl.to(statCards, {
+            opacity: 1,
+            scale: 1,
+            y: 0,
+            duration: 0.35,
+            stagger: 0.08,
+            ease: 'back.out(1.7)'
+        }, 0.82);
 
-            const typeableTokens = [];
-
-            TERMINAL_SCRIPT.forEach(token => {
-                if (token.type === 'spacer') {
-                    const sp = document.createElement('div');
-                    sp.style.height = '8px';
-                    terminalBody.appendChild(sp);
-                    return;
-                }
-                if (token.type === 'cursor') {
-                    const line = document.createElement('div');
-                    line.className = 'term-line cursor-line';
-                    line.style.opacity = '0';
-                    line.innerHTML = '<span class="term-prompt">~</span><span class="term-blink-cursor">\u258a</span>';
-                    terminalBody.appendChild(line);
-                    typeableTokens.push({ el: line, isCursor: true });
-                    return;
-                }
-                if (token.type === 'prompt') {
-                    const line = document.createElement('div');
-                    line.className = 'term-line term-cmd-line';
-                    line.style.opacity = '0';
-                    const promptSpan = document.createElement('span');
-                    promptSpan.className = 'term-prompt';
-                    promptSpan.textContent = '~';
-                    const cmdSpan = document.createElement('span');
-                    cmdSpan.className = 'term-cmd';
-                    token.cmd.split('').forEach(ch => {
-                        const s = document.createElement('span');
-                        s.className = 'typed-char';
-                        s.textContent = ch;
-                        cmdSpan.appendChild(s);
-                    });
-                    line.appendChild(promptSpan);
-                    line.appendChild(cmdSpan);
-                    terminalBody.appendChild(line);
-                    typeableTokens.push({ el: line, chars: cmdSpan.querySelectorAll('.typed-char'), isTyped: true });
-                    return;
-                }
-                if (token.type === 'output') {
-                    const div = document.createElement('div');
-                    div.className = 'term-output-line term-output';
-                    if (token.html) div.innerHTML = token.html;
-                    else div.textContent = token.text;
-                    terminalBody.appendChild(div);
-                    typeableTokens.push({ el: div, isTyped: false });
-                    return;
-                }
-                if (token.type === 'code') {
-                    const div = document.createElement('div');
-                    div.className = 'term-code-block';
-                    div.textContent = token.lines.join('\n');
-                    terminalBody.appendChild(div);
-                    typeableTokens.push({ el: div, isTyped: false });
-                }
-            });
-
-            let terminalTriggered = false;
-            const CHAR_DELAY = 36;
-            const LINE_PAUSE = 190;
-
-            function runTerminalSequence() {
-                if (terminalTriggered) return;
-                terminalTriggered = true;
-                let delay = 350;
-
-                typeableTokens.forEach(token => {
-                    if (token.isCursor) {
-                        setTimeout(() => { token.el.style.opacity = '1'; }, delay);
-                        return;
-                    }
-                    if (token.isTyped) {
-                        setTimeout(() => { token.el.style.opacity = '1'; }, delay);
-                        delay += 80;
-                        token.chars.forEach(ch => {
-                            setTimeout(() => ch.classList.add('revealed'), delay);
-                            delay += CHAR_DELAY;
-                        });
-                        delay += LINE_PAUSE;
-                    } else {
-                        setTimeout(() => token.el.classList.add('revealed'), delay);
-                        delay += LINE_PAUSE + 60;
-                    }
-                });
+        // 3D. Stat Numbers Count Up in Sync with Scroll
+        aboutTl.to(statProxy, {
+            projects: 15,
+            hacks: 10,
+            years: 3,
+            duration: 1.4,
+            ease: 'power2.out',
+            onUpdate: () => {
+                if (statProjectsEl) statProjectsEl.textContent = Math.round(statProxy.projects) + '+';
+                if (statHacksEl)    statHacksEl.textContent    = Math.round(statProxy.hacks) + '+';
+                if (statYearsEl)    statYearsEl.textContent    = Math.round(statProxy.years);
             }
+        }, 0.85);
 
-            const termObs = new IntersectionObserver(entries => {
-                entries.forEach(e => {
-                    if (e.isIntersecting) {
-                        runTerminalSequence();
-                        termObs.disconnect();
-                    }
-                });
-            }, { threshold: 0.25 });
-            termObs.observe(aboutSection);
-        }
+        // 3E. Terminal Typing Scrollytelling (Driven Directly by Scroll Position)
+        // Command 1: whoami
+        aboutTl.set(cmd1, { display: 'flex', opacity: 1 }, 0.95);
+        if (cur1) aboutTl.set(cur1, { display: 'inline-block' }, 0.95);
 
-        // ---- 4. PARALLAX MOUSE EFFECT ----
+        cmd1Chars.forEach((ch, idx) => {
+            aboutTl.set(ch, { display: 'inline', opacity: 1 }, 1.02 + idx * 0.06);
+        });
+
+        if (cur1) aboutTl.set(cur1, { display: 'none' }, 1.40);
+        aboutTl.fromTo(out1,
+            { display: 'block', opacity: 0, y: 8 },
+            { opacity: 1, y: 0, duration: 0.18, ease: 'power2.out' },
+            1.44
+        );
+
+        // Command 2: cat stack.json
+        aboutTl.set(cmd2, { display: 'flex', opacity: 1 }, 1.70);
+        if (cur2) aboutTl.set(cur2, { display: 'inline-block' }, 1.70);
+
+        cmd2Chars.forEach((ch, idx) => {
+            aboutTl.set(ch, { display: 'inline', opacity: 1 }, 1.76 + idx * 0.05);
+        });
+
+        if (cur2) aboutTl.set(cur2, { display: 'none' }, 2.50);
+        aboutTl.fromTo(out2,
+            { display: 'block', opacity: 0, scaleY: 0.8, transformOrigin: 'top' },
+            { opacity: 1, scaleY: 1, duration: 0.28, ease: 'power2.out' },
+            2.54
+        );
+
+        // Command 3: cat status.txt
+        aboutTl.set(cmd3, { display: 'flex', opacity: 1 }, 2.88);
+        if (cur3) aboutTl.set(cur3, { display: 'inline-block' }, 2.88);
+
+        cmd3Chars.forEach((ch, idx) => {
+            aboutTl.set(ch, { display: 'inline', opacity: 1 }, 2.94 + idx * 0.045);
+        });
+
+        if (cur3) aboutTl.set(cur3, { display: 'none' }, 3.60);
+        aboutTl.fromTo(out3,
+            { display: 'block', opacity: 0, y: 8 },
+            { opacity: 1, y: 0, duration: 0.18, ease: 'power2.out' },
+            3.64
+        );
+
+        // Terminal Idle Prompt
+        aboutTl.set(termIdle, { display: 'flex', opacity: 1 }, 3.86);
+
+        // Final Terminal Highlight & Rest Time for Easy Reading Before Unpin
+        aboutTl.to('.terminal-v2', {
+            boxShadow: '0 32px 85px rgba(0, 0, 0, 0.75), 0 0 45px rgba(56, 189, 248, 0.14)',
+            duration: 0.3
+        }, 3.90);
+
+        // ---- 4. PARALLAX MOUSE EFFECT ON BIO BLOCKS ----
         const parallaxContainer = document.getElementById('parallax-container');
         if (parallaxContainer && !window.matchMedia('(pointer: coarse)').matches) {
-            aboutSection.addEventListener('mousemove', (e) => {
-                const rect = aboutSection.getBoundingClientRect();
+            aboutPinnedWrap.addEventListener('mousemove', (e) => {
+                const rect = aboutPinnedWrap.getBoundingClientRect();
                 const x = (e.clientX - rect.left) / rect.width - 0.5;
                 const y = (e.clientY - rect.top) / rect.height - 0.5;
-                parallaxBlocks.forEach(block => {
-                    const depth = parseFloat(block.dataset.depth) || 0.3;
-                    block.style.transform = `translate(${x * depth * 30}px, ${y * depth * 30}px)`;
-                });
+                parallaxContainer.style.transform = `rotateY(${x * 8}deg) rotateX(${-y * 8}deg)`;
             });
-            aboutSection.addEventListener('mouseleave', () => {
-                parallaxBlocks.forEach(b => b.style.transform = 'translate(0, 0)');
+            aboutPinnedWrap.addEventListener('mouseleave', () => {
+                parallaxContainer.style.transform = 'rotateY(0deg) rotateX(0deg)';
+                parallaxContainer.style.transition = 'transform 0.5s ease';
+                setTimeout(() => parallaxContainer.style.transition = '', 500);
             });
         }
-
-        // ---- 5. STAT COUNTERS WITH SUFFIX ----
-        const statNums = aboutSection.querySelectorAll('.stat-num');
-        statNums.forEach(stat => {
-            const target = parseInt(stat.dataset.target);
-            const suffix = stat.dataset.suffix || '';
-            let triggered = false;
-            ScrollTrigger.create({
-                trigger: stat,
-                start: 'top 85%',
-                onEnter: () => {
-                    if (triggered) return;
-                    triggered = true;
-                    let current = 0;
-                    const steps = 40;
-                    const increment = target / steps;
-                    const tick = setInterval(() => {
-                        current += increment;
-                        if (current >= target) {
-                            stat.textContent = target + suffix;
-                            clearInterval(tick);
-                        } else {
-                            stat.textContent = Math.floor(current) + suffix;
-                        }
-                    }, 35);
-                }
-            });
-        });
     }
 
 
