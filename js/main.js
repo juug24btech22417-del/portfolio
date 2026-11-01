@@ -76,35 +76,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderCursor();
 
-        function bindCursorHover(selector, labelText, scale) {
+        function bindCursorHover(selector, scale) {
             document.querySelectorAll(selector).forEach(el => {
                 el.addEventListener('mouseenter', () => {
                     cursorRing.classList.add('is-hovered');
-                    const text = el.getAttribute('data-cursor') || labelText;
-                    if (text) {
-                        cursorRing.classList.add('has-label');
-                        if (cursorLabel) cursorLabel.textContent = text;
-                        targetScale = scale || 2.4;
-                    } else {
-                        cursorRing.classList.remove('has-label');
-                        if (cursorLabel) cursorLabel.textContent = '';
-                        targetScale = scale || 1.6;
-                    }
+                    targetScale = scale || 1.25;
                 });
                 el.addEventListener('mouseleave', () => {
-                    cursorRing.classList.remove('is-hovered', 'has-label');
-                    if (cursorLabel) cursorLabel.textContent = '';
+                    cursorRing.classList.remove('is-hovered');
                     targetScale = 1;
                 });
             });
         }
 
-        bindCursorHover('a, button, .btn', '', 1.8);
-        bindCursorHover('.holo-card', 'VIEW', 2.6);
-        bindCursorHover('.skill-node', 'EXPLORE', 2.4);
-        bindCursorHover('.profile-card', 'ABOUT', 2.0);
-        bindCursorHover('#copy-email', 'COPY', 2.0);
-        bindCursorHover('.terminal-v2', 'RUN', 2.0);
+        // Only gently react on interactive clickable elements (links & buttons), never on cards
+        bindCursorHover('a, button, .btn', 1.25);
     }
 
     // ========================================
