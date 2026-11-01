@@ -921,28 +921,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const termIdle = document.getElementById('term-idle');
 
-        // ---- 2. INITIAL HIDDEN STATES ----
-        gsap.set(aboutPanelLeft, {
-            opacity: 0,
-            x: -160,
-            z: -140,
-            rotateY: -22,
-            rotateX: 6,
-            scale: 0.86,
-            filter: 'blur(10px)',
-            transformPerspective: 1400
-        });
+        const isMobile = window.innerWidth <= 900;
 
-        gsap.set(aboutPanelRight, {
-            opacity: 0,
-            x: 160,
-            z: -140,
-            rotateY: 22,
-            rotateX: -6,
-            scale: 0.86,
-            filter: 'blur(10px)',
-            transformPerspective: 1400
-        });
+        // ---- 2. INITIAL HIDDEN STATES ----
+        if (isMobile) {
+            gsap.set(aboutPanelLeft, {
+                opacity: 0,
+                y: 28,
+                scale: 0.96,
+                filter: 'blur(4px)'
+            });
+            gsap.set(aboutPanelRight, {
+                opacity: 0,
+                y: 28,
+                scale: 0.96,
+                filter: 'blur(4px)'
+            });
+        } else {
+            gsap.set(aboutPanelLeft, {
+                opacity: 0,
+                x: -160,
+                z: -140,
+                rotateY: -22,
+                rotateX: 6,
+                scale: 0.86,
+                filter: 'blur(10px)',
+                transformPerspective: 1400
+            });
+            gsap.set(aboutPanelRight, {
+                opacity: 0,
+                x: 160,
+                z: -140,
+                rotateY: 22,
+                rotateX: -6,
+                scale: 0.86,
+                filter: 'blur(10px)',
+                transformPerspective: 1400
+            });
+        }
 
         gsap.set(bioBlocks, {
             opacity: 0,
@@ -974,14 +990,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const statYearsEl    = aboutPinnedWrap.querySelector('.stat-float:nth-child(3) .stat-num');
         const statProxy = { projects: 0, hacks: 0, years: 0 };
 
-        // ---- 3. PINNED SCROLLYTELLING TIMELINE ----
+        // ---- 3. SCROLLYTELLING TIMELINE (Pinned on desktop, scrubbed on mobile) ----
         const aboutTl = gsap.timeline({
             scrollTrigger: {
                 trigger: aboutPinnedWrap,
-                pin: true,
-                scrub: 0.7,
-                start: 'top top',
-                end: '+=1600',
+                pin: !isMobile,
+                scrub: isMobile ? 0.3 : 0.7,
+                start: isMobile ? 'top 85%' : 'top top',
+                end: isMobile ? 'bottom 15%' : '+=1600',
                 anticipatePin: 1,
                 invalidateOnRefresh: true
             }
@@ -991,6 +1007,7 @@ document.addEventListener('DOMContentLoaded', () => {
         aboutTl.to(aboutPanelLeft, {
             opacity: 1,
             x: 0,
+            y: 0,
             z: 0,
             rotateY: 0,
             rotateX: 0,
@@ -1003,6 +1020,7 @@ document.addEventListener('DOMContentLoaded', () => {
         aboutTl.to(aboutPanelRight, {
             opacity: 1,
             x: 0,
+            y: 0,
             z: 0,
             rotateY: 0,
             rotateX: 0,
