@@ -9,6 +9,54 @@ document.addEventListener('DOMContentLoaded', () => {
     gsap.registerPlugin(ScrollTrigger);
 
     // ========================================
+    // PURE SILVER-WHITE DOT & RING CURSOR
+    // Active immediately from page load (works on intro screen & throughout site)
+    // ========================================
+    const cursorDot = document.getElementById('cursor-dot');
+    const cursorRing = document.getElementById('cursor-ring');
+
+    if (cursorDot && cursorRing && !window.matchMedia('(pointer: coarse)').matches) {
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let ringX = mouseX;
+        let ringY = mouseY;
+        let hasMoved = false;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            if (!hasMoved) {
+                hasMoved = true;
+                ringX = mouseX;
+                ringY = mouseY;
+                cursorDot.style.opacity = '1';
+                cursorRing.style.opacity = '1';
+            }
+            cursorDot.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
+        }, { passive: true });
+
+        document.addEventListener('mouseleave', () => {
+            cursorDot.style.opacity = '0';
+            cursorRing.style.opacity = '0';
+        });
+
+        document.addEventListener('mouseenter', () => {
+            if (hasMoved) {
+                cursorDot.style.opacity = '1';
+                cursorRing.style.opacity = '1';
+            }
+        });
+
+        function renderCursor() {
+            ringX += (mouseX - ringX) * 0.18;
+            ringY += (mouseY - ringY) * 0.18;
+            cursorRing.style.transform = `translate3d(${ringX}px, ${ringY}px, 0)`;
+            requestAnimationFrame(renderCursor);
+        }
+        renderCursor();
+    }
+
+    // ========================================
     // WAIT FOR INTRO
     // ========================================
     // The intro splash runs on its own timeline. If we initialize
@@ -46,45 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         gsap.ticker.lagSmoothing(0);
         window.lenis = lenis;
-    }
-
-    // ========================================
-    // PURE SILVER-WHITE DOT & RING CURSOR
-    // ========================================
-    const cursorDot = document.getElementById('cursor-dot');
-    const cursorRing = document.getElementById('cursor-ring');
-
-    if (cursorDot && cursorRing && !window.matchMedia('(pointer: coarse)').matches) {
-        let mouseX = window.innerWidth / 2;
-        let mouseY = window.innerHeight / 2;
-        let ringX = mouseX;
-        let ringY = mouseY;
-
-        window.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            cursorDot.style.opacity = '1';
-            cursorRing.style.opacity = '1';
-            cursorDot.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
-        }, { passive: true });
-
-        document.addEventListener('mouseleave', () => {
-            cursorDot.style.opacity = '0';
-            cursorRing.style.opacity = '0';
-        });
-
-        document.addEventListener('mouseenter', () => {
-            cursorDot.style.opacity = '1';
-            cursorRing.style.opacity = '1';
-        });
-
-        function renderCursor() {
-            ringX += (mouseX - ringX) * 0.18;
-            ringY += (mouseY - ringY) * 0.18;
-            cursorRing.style.transform = `translate3d(${ringX}px, ${ringY}px, 0)`;
-            requestAnimationFrame(renderCursor);
-        }
-        renderCursor();
     }
 
     // ========================================
