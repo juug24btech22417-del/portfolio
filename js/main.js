@@ -49,48 +49,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================
-    // DYNAMIC MAGNETIC CURSOR
+    // PURE SILVER-WHITE DOT & RING CURSOR
     // ========================================
     const cursorDot = document.getElementById('cursor-dot');
     const cursorRing = document.getElementById('cursor-ring');
-    const cursorLabel = document.getElementById('cursor-label');
 
     if (cursorDot && cursorRing && !window.matchMedia('(pointer: coarse)').matches) {
         let mouseX = window.innerWidth / 2;
         let mouseY = window.innerHeight / 2;
         let ringX = mouseX;
         let ringY = mouseY;
-        let targetScale = 1;
 
         window.addEventListener('mousemove', (e) => {
             mouseX = e.clientX;
             mouseY = e.clientY;
+            cursorDot.style.opacity = '1';
+            cursorRing.style.opacity = '1';
             cursorDot.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
         }, { passive: true });
 
+        document.addEventListener('mouseleave', () => {
+            cursorDot.style.opacity = '0';
+            cursorRing.style.opacity = '0';
+        });
+
+        document.addEventListener('mouseenter', () => {
+            cursorDot.style.opacity = '1';
+            cursorRing.style.opacity = '1';
+        });
+
         function renderCursor() {
-            ringX += (mouseX - ringX) * 0.16;
-            ringY += (mouseY - ringY) * 0.16;
-            cursorRing.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) scale(${targetScale})`;
+            ringX += (mouseX - ringX) * 0.18;
+            ringY += (mouseY - ringY) * 0.18;
+            cursorRing.style.transform = `translate3d(${ringX}px, ${ringY}px, 0)`;
             requestAnimationFrame(renderCursor);
         }
         renderCursor();
-
-        function bindCursorHover(selector, scale) {
-            document.querySelectorAll(selector).forEach(el => {
-                el.addEventListener('mouseenter', () => {
-                    cursorRing.classList.add('is-hovered');
-                    targetScale = scale || 1.25;
-                });
-                el.addEventListener('mouseleave', () => {
-                    cursorRing.classList.remove('is-hovered');
-                    targetScale = 1;
-                });
-            });
-        }
-
-        // Only gently react on interactive clickable elements (links & buttons), never on cards
-        bindCursorHover('a, button, .btn', 1.25);
     }
 
     // ========================================
