@@ -4032,3 +4032,79 @@ body.menu-open {
         gap: 2px;
     }
 }
+/* ============================================================
+   HERO MICRO-DATA / WORK BACKDROP / MENU CLOSE FIXES
+   ============================================================ */
+
+/* --- Work deck: backdrop drifts down while the project cards change --- */
+.work-backdrop {
+    position: absolute;
+    /* oversized so the drift never exposes an edge */
+    inset: -18% -2%;
+    z-index: 0;
+    pointer-events: none;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.032) 1px, transparent 1px);
+    background-size: 100% 96px;
+    will-change: transform;
+}
+
+.work-backdrop::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 45%, transparent 32%, rgba(4, 6, 13, 0.5) 100%);
+    pointer-events: none;
+}
+
+.work-stage {
+    z-index: 1;
+}
+
+/* --- Phone hero: micro-data moves above the portrait, off the cutout ---
+   The portrait is 86vw wide and flush to the bottom edge, so the old
+   bottom-left label (left: 20px) landed straight on the chest. */
+@media (max-width: 768px) {
+    .hero-editorial {
+        top: 80px;
+        bottom: auto;
+    }
+    .hero-editorial-left {
+        left: 20px;
+        right: auto;
+        max-width: 62vw;
+    }
+    .hero-editorial-right {
+        right: 20px;
+        left: auto;
+        max-width: 46vw;
+    }
+    .hero-reel-manifesto {
+        font-size: 8.5px;
+        line-height: 1.55;
+        margin-bottom: 6px;
+    }
+}
+
+@media (max-height: 560px) {
+    /* landscape phones: neither corner has room once the type is at full size */
+    .hero-editorial {
+        display: none;
+    }
+}
+
+/* --- Menu close: keep the X light while the panel is open ---
+   The hero-light-mode rule below used to win over .nav.is-menu-open,
+   leaving a dark X on the dark panel. */
+.nav.hero-light-mode:not(.is-menu-open) .nav-toggle {
+    color: rgba(17, 17, 17, 0.62);
+    border-color: rgba(17, 17, 17, 0.16);
+}
+
+.nav.hero-light-mode:not(.is-menu-open) .nav-toggle:hover {
+    color: #111111;
+    border-color: rgba(17, 17, 17, 0.28);
+}
+
+.nav.is-menu-open {
+    z-index: 101;
+}

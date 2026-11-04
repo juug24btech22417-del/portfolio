@@ -373,6 +373,11 @@ document.addEventListener('DOMContentLoaded', () => {
             link.addEventListener('click', () => setMenu(false));
         });
 
+        // Tapping anywhere outside the links dismisses the panel
+        mobileMenu.addEventListener('click', (e) => {
+            if (e.target === mobileMenu) setMenu(false);
+        });
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && mobileMenu.classList.contains('is-open')) setMenu(false);
         });
@@ -432,6 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const halo = document.getElementById('deck-halo');
         const counterCurrent = document.getElementById('deck-counter-current');
         const scrubProgress = document.getElementById('deck-scrub-progress');
+        const workBackdrop = pinnedWorkWrap.querySelector('.work-backdrop');
         const total = holoCards.length;
 
         // Pull per-card accent colors from data-accent
@@ -508,6 +514,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Progress bar scrub width
                     if (scrubProgress) {
                         scrubProgress.style.width = `${Math.min(100, Math.max(5, p * 100))}%`;
+                    }
+
+                    // Backdrop parallax: the grid travels down while the
+                    // deck holds each project, so the screen never reads as frozen
+                    if (workBackdrop) {
+                        workBackdrop.style.transform = `translate3d(0, ${(p * 520).toFixed(1)}px, 0)`;
                     }
 
                     // Accurate active index based on dynamic timeline transition midpoints
