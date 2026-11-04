@@ -263,7 +263,9 @@ ul {
         height: 15px;
     }
     .nav-name {
-        display: none;
+        display: inline-block;
+        font-size: 13px;
+        letter-spacing: 0.06em;
     }
     .nav-links {
         /* drop the absolute centring on phones so the icons have room */
@@ -421,7 +423,7 @@ ul {
     user-select: none;
     will-change: transform, opacity;
     /* lifted: extra bottom padding pulls the centered block upward */
-    padding-bottom: 8vh;
+    padding-bottom: 16vh;
 }
 
 .hero-monumental {
@@ -470,8 +472,8 @@ ul {
     left: 50%;
     transform: translateX(-50%);
     /* Reel proportion - larger, baseline still flush with the frame bottom */
-    height: 62vh;
-    max-height: 500px;
+    height: 68vh;
+    max-height: 550px;
     display: flex;
     align-items: flex-end;   /* keep image glued to bottom */
     justify-content: center;
@@ -487,7 +489,7 @@ ul {
     height: 100%;
     width: auto;
     /* Width cap so the cutout never crowds the frame on tall/narrow screens */
-    max-width: min(440px, 46vw);
+    max-width: min(470px, 50vw);
     object-fit: contain;
     object-position: bottom center;
     display: block;
@@ -958,7 +960,7 @@ ul {
         font-size: clamp(62px, 16vw, 130px);
     }
     .hero-text-layer {
-        padding-bottom: 7vh;
+        padding-bottom: 13vh;
     }
     .hero-portrait-layer {
         height: 64vh;
@@ -3767,14 +3769,14 @@ html.lenis, html.lenis body {
 
     /* ---- hero: portrait keeps its width, type fits the screen ---- */
     .hero-portrait-layer {
-        height: 60vh;
-        max-height: 430px;
+        height: 64vh;
+        max-height: 470px;
     }
     .hero-portrait-img {
         max-width: 86vw;
     }
     .hero-text-layer {
-        padding-bottom: 5vh;
+        padding-bottom: 12vh;
     }
 
     /* ---- about card ---- */
@@ -3817,8 +3819,8 @@ html.lenis, html.lenis body {
         font-size: clamp(44px, 14.5vw, 96px);
     }
     .hero-portrait-layer {
-        height: 56vh;
-        max-height: 380px;
+        height: 60vh;
+        max-height: 415px;
     }
 
     .hero-reveal-content {
@@ -4107,4 +4109,87 @@ body.menu-open {
 
 .nav.is-menu-open {
     z-index: 101;
+}
+
+/* ==========================================================================
+   ABOUT CARD BACKDROP - painted sky layer
+   The painting sits behind the closed card and dissolves to black while the
+   card opens, so the expansion ends on a clean dark field.
+   ========================================================================== */
+.about-card-section {
+    background: #04060d;
+    isolation: isolate;
+}
+
+.about-card-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background: #04060d;
+    pointer-events: none;
+}
+
+
+.about-card-backdrop-art {
+    position: absolute;
+    inset: 0;
+    /* first layer wins; the others cover a differently-typed save */
+    background-image: url('../assets/about-me-bg.jpg'),
+                      url('../assets/about-me-bg.png'),
+                      url('../assets/about-me-bg.webp');
+    background-size: cover;
+    background-position: center 40%;
+    background-repeat: no-repeat;
+    opacity: 1;
+    transform: scale(1.03);
+    will-change: opacity;
+}
+
+.about-card-stage {
+    position: relative;
+    z-index: 2;
+}
+
+@media (max-width: 768px) {
+    .about-card-backdrop-art {
+        background-position: 26% center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .about-card-backdrop-art {
+        will-change: auto;
+    }
+}
+
+/* ==========================================================================
+   NAV - HERO ONLY
+   The bar belongs to the hero: scrolling past it lifts the nav out of view,
+   and it returns when the hero comes back.
+   ========================================================================== */
+.nav {
+    transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease,
+                background 0.3s ease,
+                border-color 0.3s ease;
+}
+
+.nav.is-past-hero {
+    transform: translateY(-120%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* an open menu always outranks the hero rule */
+.nav.is-menu-open {
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nav {
+        transition: none;
+    }
 }

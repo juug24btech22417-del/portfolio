@@ -148,6 +148,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const heroEl = document.getElementById('hero');
         const limit = heroEl ? heroEl.offsetTop + heroEl.offsetHeight - 80 : window.innerHeight;
         navForHero.classList.toggle('hero-light-mode', window.scrollY < limit);
+        // The nav is part of the hero: it leaves with it and comes back on return.
+        navForHero.classList.toggle('is-past-hero', window.scrollY >= limit);
     }
     syncNavHeroMode();
 
@@ -279,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // phone gets a shorter pin than a desktop screen
                 end: () => '+=' + Math.round(window.innerHeight * (window.innerWidth <= 768 ? 1.15 : 1.6)),
                 scrub: 1,
-                pin: '.about-card-stage',
+                pin: true, // pin the section itself so the painted backdrop holds still
                 pinSpacing: true,
                 anticipatePin: 1
             }
@@ -320,7 +322,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 duration: 0.28,
                 stagger: 0.03,
                 ease: 'power2.out'
-            }, 0.50);
+            }, 0.50)
+            // Backdrop - the painted sky dissolves to black while the card opens
+            .to('#about-card-backdrop-art', {
+                opacity: 0,
+                duration: 0.5,
+                ease: 'power1.inOut'
+            }, 0.15);
+
     }
 
     // ========================================
