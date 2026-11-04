@@ -135,7 +135,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const alt = Math.max(12, Math.round(400 - progress * 375));
             hudTelemetryVal.textContent = `VEL ${vel.toFixed(1)} KM/S · ALT ${alt} KM`;
         }
+
+        syncNavHeroMode();
     }, { passive: true });
+
+    // Applied immediately as well: on refresh the nav must already be in its
+    // hero state, without waiting for a scroll or for the intro callback.
+    function syncNavHeroMode() {
+        const navForHero = document.getElementById('nav');
+        if (!navForHero) return;
+        // dark ink for as long as the light hero is still behind the bar
+        const heroEl = document.getElementById('hero');
+        const limit = heroEl ? heroEl.offsetTop + heroEl.offsetHeight - 80 : window.innerHeight;
+        navForHero.classList.toggle('hero-light-mode', window.scrollY < limit);
+    }
+    syncNavHeroMode();
 
     // ========================================
     // SCROLL PROGRESS BAR
@@ -165,240 +179,209 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================
-    // HERO ANIMATIONS
+    // EDITORIAL REEL HERO & SCROLLYTELLING (light → dark)
     // ========================================
+    const heroSection = document.getElementById('hero');
+    const heroPinnedWrap = document.getElementById('hero-pinned-wrap');
+    const heroLightBackdrop = document.getElementById('hero-light-backdrop');
+    const heroBacklight = document.getElementById('hero-backlight');
+    const heroTextLayer = document.getElementById('hero-text-layer');
+    const heroLineTop = document.getElementById('hero-line-top');
+    const heroLineBottom = document.getElementById('hero-line-bottom');
+    const heroPortraitLayer = document.getElementById('hero-portrait-layer');
+    const heroPortraitImg = document.getElementById('hero-portrait-img');
+    const heroEditorialLeft = document.getElementById('hero-editorial-left');
+    const heroEditorialRight = document.getElementById('hero-editorial-right');
+    const navEl = document.getElementById('nav');
 
-    // Letter flip animation for name
-    const nameContainer = document.querySelector('.letter-container');
-    const yourName = 'DHRUV';
+    if (heroSection && heroPinnedWrap) {
+        // --- 1. Entrance Animation (light editorial reveal) ---
+        function runHeroEntrance() {
+            const entranceTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-    if (nameContainer) {
-        // Create letter spans
-        const letters = yourName.split('');
-        letters.forEach((letter, i) => {
-            const span = document.createElement('span');
-            span.className = 'hero-letter';
-            span.textContent = letter === ' ' ? '\u00A0' : letter;
-            span.style.display = 'inline-block';
-            span.style.opacity = '0';
-            span.style.transform = 'rotateY(90deg)';
-            nameContainer.appendChild(span);
+            // Start in light mode — nav gets dark text
+            if (navEl) navEl.classList.add('hero-light-mode');
 
-            // Animate each letter
-            gsap.to(span, {
+            // Initial states
+            if (heroLineTop)    gsap.set(heroLineTop,    { opacity: 0, y: 40, scale: 0.97 });
+            if (heroLineBottom) gsap.set(heroLineBottom, { opacity: 0, y: 60, scale: 0.97 });
+            if (heroPortraitLayer) gsap.set(heroPortraitLayer, { opacity: 0, y: 50, scale: 0.96 });
+            if (heroBacklight)  gsap.set(heroBacklight,  { opacity: 1, scale: 1 });
+            gsap.set([heroEditorialLeft, heroEditorialRight].filter(Boolean), { opacity: 0, y: 18 });
+
+            entranceTl
+                .to(heroLineTop, { opacity: 0.92, y: 0, scale: 1, duration: 1.1 }, 0.05)
+                .to(heroLineBottom, { opacity: 1, y: 0, scale: 1, duration: 1.2 }, 0.18)
+                .to(heroPortraitLayer, { opacity: 1, y: 0, scale: 1, duration: 1.3 }, 0.3)
+                .to([heroEditorialLeft, heroEditorialRight].filter(Boolean), {
+                    opacity: 1, y: 0, duration: 0.8, stagger: 0.1
+                }, 0.75);
+        }
+
+        if (typeof window.__waitForIntro === 'function' && document.body.classList.contains('intro-active')) {
+            window.__waitForIntro(() => { runHeroEntrance(); });
+        } else {
+            runHeroEntrance();
+        }
+
+        // --- 3. Interactive Mouse Parallax (Desktop only) ---
+        if (window.matchMedia('(pointer: fine)').matches) {
+            let pTargetX = 0, pTargetY = 0;
+            let pCurrentX = 0, pCurrentY = 0;
+            let isHoveringHero = false;
+
+            heroPinnedWrap.addEventListener('mouseenter', () => { isHoveringHero = true; });
+            heroPinnedWrap.addEventListener('mouseleave', () => {
+                isHoveringHero = false;
+                pTargetX = 0; pTargetY = 0;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isHoveringHero) return;
+                const cx = window.innerWidth / 2;
+                const cy = window.innerHeight / 2;
+                pTargetX = (e.clientX - cx) / cx;
+                pTargetY = (e.clientY - cy) / cy;
+            }, { passive: true });
+
+            function renderHeroParallax() {
+                if (isHoveringHero || Math.abs(pCurrentX - pTargetX) > 0.001 || Math.abs(pCurrentY - pTargetY) > 0.001) {
+                    pCurrentX += (pTargetX - pCurrentX) * 0.08;
+                    pCurrentY += (pTargetY - pCurrentY) * 0.08;
+
+                    if (heroBacklight)
+                        heroBacklight.style.transform = `translate(calc(-50% + ${pCurrentX * -22}px), calc(-50% + ${pCurrentY * -16}px))`;
+                    if (heroTextLayer)
+                        heroTextLayer.style.transform = `translate3d(${pCurrentX * 12}px, ${pCurrentY * 8}px, 0)`;
+                    if (heroPortraitImg)
+                        heroPortraitImg.style.transform = `translate3d(${pCurrentX * -20}px, ${pCurrentY * -12}px, 0) rotateY(${pCurrentX * 2.5}deg)`;
+                }
+                requestAnimationFrame(renderHeroParallax);
+            }
+            renderHeroParallax();
+        }
+    }
+
+    // ========================================
+    // ABOUT CARD — SCROLLYTELLING EXPANSION
+    // A small rounded card opens left and right into the framed about card.
+    // ========================================
+    const aboutCardSection = document.getElementById('about-card');
+    const aboutCardFrame = document.getElementById('hero-reveal-content');
+    const aboutCardIntro = document.querySelector('.hero-card-intro');
+
+    if (aboutCardSection && aboutCardFrame) {
+        gsap.timeline({
+            scrollTrigger: {
+                trigger: aboutCardSection,
+                start: 'top top',
+                // function form: ScrollTrigger re-evaluates on refresh, so a
+                // phone gets a shorter pin than a desktop screen
+                end: () => '+=' + Math.round(window.innerHeight * (window.innerWidth <= 768 ? 1.15 : 1.6)),
+                scrub: 1,
+                pin: '.about-card-stage',
+                pinSpacing: true,
+                anticipatePin: 1
+            }
+        })
+            // Stage 1 — the closed card widens left and right into the frame
+            .to(aboutCardFrame, {
+                '--reveal-t': '0%',
+                '--reveal-r': '0%',
+                '--reveal-b': '0%',
+                '--reveal-l': '0%',
+                '--reveal-round': '0px',
+                duration: 0.45,
+                ease: 'power2.inOut'
+            }, 0.08)
+            // Stage 2 — ABOUT peels off to the left, ME to the right
+            .to('.hero-card-intro span:first-child', {
+                xPercent: -120,
+                opacity: 0,
+                duration: 0.24,
+                ease: 'power2.in'
+            }, 0.14)
+            .to('.hero-card-intro span:last-child', {
+                xPercent: 120,
+                opacity: 0,
+                duration: 0.24,
+                ease: 'power2.in'
+            }, 0.14)
+            // the wordmark's veil clears once both words have left
+            .to(aboutCardIntro, {
+                opacity: 0,
+                duration: 0.10,
+                ease: 'power1.out'
+            }, 0.40)
+            // Stage 3 — wording surfaces inside the open frame, still pinned
+            .to('.about-card-section .hero-card-reveal', {
                 opacity: 1,
-                rotateY: 0,
-                duration: 0.6,
-                delay: 0.4 + (i * 0.06),
-                ease: 'back.out(1.7)'
-            });
-        });
+                y: 0,
+                duration: 0.28,
+                stagger: 0.03,
+                ease: 'power2.out'
+            }, 0.50);
     }
 
-    // Typewriter effect for role
-    const typewriterText = document.querySelector('.typewriter-text');
-    const roleText = 'Full Stack Developer · Product Builder';
-
-    if (typewriterText) {
-        let charIndex = 0;
-        const typeDelay = 45;
-        const startDelay = 1200;
-
-        setTimeout(() => {
-            const typeInterval = setInterval(() => {
-                if (charIndex < roleText.length) {
-                    typewriterText.textContent += roleText.charAt(charIndex);
-                    charIndex++;
-                } else {
-                    clearInterval(typeInterval);
-                }
-            }, typeDelay);
-        }, startDelay);
-    }
-
-    // Hero tagline with Variable Proximity effect
-    const heroTagline = document.querySelector('.hero-tagline');
-    if (heroTagline) {
-        const originalText = heroTagline.innerHTML;
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = originalText;
-
-        // Wrap each character in spans
-        function wrapText(node) {
-            if (node.nodeType === Node.TEXT_NODE) {
-                const text = node.textContent;
-                const fragment = document.createDocumentFragment();
-                for (let char of text) {
-                    const span = document.createElement('span');
-                    span.className = 'proximity-char';
-                    span.textContent = char === ' ' ? '\u00A0' : char;
-                    span.style.display = 'inline-block';
-                    span.style.transition = 'transform 0.2s ease, opacity 0.2s ease, color 0.2s ease';
-                    span.style.opacity = '0.4';
-                    span.style.transform = 'scale(0.9)';
-                    fragment.appendChild(span);
-                }
-                return fragment;
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                const clone = node.cloneNode(false);
-                for (let child of node.childNodes) {
-                    clone.appendChild(wrapText(child));
-                }
-                return clone;
-            }
-            return node;
+    // ========================================
+    // PIN RE-MEASURE (mobile toolbars + late fonts)
+    // iOS collapses its toolbar and the display fonts arrive after
+    // first paint, both of which move the pinned stage. Refresh so the
+    // card stays centred through the whole expansion.
+    // ========================================
+    if (typeof ScrollTrigger !== 'undefined') {
+        const refreshPins = () => ScrollTrigger.refresh();
+        window.addEventListener('load', refreshPins);
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(refreshPins).catch(() => {});
         }
-
-        // Clear and rebuild with wrapped chars
-        heroTagline.innerHTML = '';
-        for (let child of tempDiv.childNodes) {
-            heroTagline.appendChild(wrapText(child));
-        }
-
-        // Proximity effect
-        const chars = heroTagline.querySelectorAll('.proximity-char');
-        let mouseX = 0;
-        let mouseY = 0;
-        const radius = 120;
-
-        document.addEventListener('mousemove', (e) => {
-            const rect = heroTagline.getBoundingClientRect();
-            mouseX = e.clientX - rect.left;
-            mouseY = e.clientY - rect.top;
-
-            chars.forEach(char => {
-                const charRect = char.getBoundingClientRect();
-                const charX = charRect.left + charRect.width / 2 - rect.left;
-                const charY = charRect.top + charRect.height / 2 - rect.top;
-
-                const distance = Math.sqrt((mouseX - charX) ** 2 + (mouseY - charY) ** 2);
-
-                if (distance < radius) {
-                    const intensity = 1 - (distance / radius);
-                    char.style.opacity = 0.4 + (intensity * 0.6);
-                    char.style.transform = `scale(${0.9 + intensity * 0.2}) translateY(${-intensity * 3}px)`;
-                    char.style.color = intensity > 0.5 ? '#ffffff' : '';
-                } else {
-                    char.style.opacity = '0.4';
-                    char.style.transform = 'scale(0.9)';
-                    char.style.color = '';
-                }
-            });
-        }, { passive: true });
-
-        // Entrance animation
-        gsap.from(chars, {
-            opacity: 0,
-            y: 10,
-            duration: 0.4,
-            stagger: 0.02,
-            delay: 2.0,
-            ease: 'power2.out'
-        });
-    }
-
-    // Hero CTA slide up
-    const heroCta = document.querySelector('.hero-cta');
-    if (heroCta) {
-        gsap.from(heroCta.children, {
-            opacity: 0,
-            y: 20,
-            duration: 0.5,
-            stagger: 0.1,
-            delay: 2.4,
-            ease: 'power2.out'
-        });
-    }
-
-    // Hero greeting animation
-    const heroGreeting = document.querySelector('.hero-greeting');
-    if (heroGreeting) {
-        gsap.from(heroGreeting, {
-            opacity: 0,
-            y: 20,
-            duration: 0.6,
-            delay: 0.1,
-            ease: 'power2.out'
-        });
-    }
-
-    // Hero badge animation
-    const heroBadge = document.querySelector('.hero-badge');
-    if (heroBadge) {
-        gsap.from(heroBadge, {
-            opacity: 0,
-            y: -10,
-            duration: 0.5,
-            delay: 0.2,
-            ease: 'power2.out'
+        let resizeTimer = 0;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(refreshPins, 200);
         });
     }
 
     // ========================================
-    // PROFILE CARD 3D TILT EFFECT
+    // MOBILE MENU
     // ========================================
-    const profileCard = document.getElementById('profile-card');
-    const profileWrapper = profileCard?.querySelector('.profile-photo-wrapper');
+    const navToggle = document.getElementById('nav-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const navBar = document.getElementById('nav');
 
-    if (profileCard && profileWrapper) {
-        let isHovering = false;
-        let currentX = 0;
-        let currentY = 0;
-        let targetX = 0;
-        let targetY = 0;
-
-        profileCard.addEventListener('mouseenter', () => {
-            isHovering = true;
-            gsap.to(profileWrapper, {
-                scale: 1.02,
-                duration: 0.3,
-                ease: 'power2.out'
-            });
-        });
-
-        profileCard.addEventListener('mouseleave', () => {
-            isHovering = false;
-            gsap.to(profileWrapper, {
-                rotateX: 0,
-                rotateY: 0,
-                scale: 1,
-                duration: 0.5,
-                ease: 'power2.out'
-            });
-        });
-
-        profileCard.addEventListener('mousemove', (e) => {
-            const rect = profileCard.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-
-            // Calculate rotation (max 15 degrees)
-            targetY = ((x - centerX) / centerX) * 15;
-            targetX = -((y - centerY) / centerY) * 15;
-        }, { passive: true });
-
-        // Smooth animation loop
-        function animateCard() {
-            if (isHovering) {
-                currentX += (targetX - currentX) * 0.1;
-                currentY += (targetY - currentY) * 0.1;
-                profileWrapper.style.transform = `rotateX(${currentX}deg) rotateY(${currentY}deg)`;
+    if (navToggle && mobileMenu) {
+        const setMenu = (open) => {
+            mobileMenu.classList.toggle('is-open', open);
+            navToggle.classList.toggle('is-open', open);
+            navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            navToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+            mobileMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
+            document.body.classList.toggle('menu-open', open);
+            if (navBar) navBar.classList.toggle('is-menu-open', open);
+            // Lenis drives the page scroll, so lock it explicitly
+            if (window.lenis) {
+                if (open) window.lenis.stop();
+                else window.lenis.start();
             }
-            requestAnimationFrame(animateCard);
-        }
-        animateCard();
+        };
 
-        // Entrance animation
-        gsap.from(profileCard, {
-            opacity: 0,
-            y: 40,
-            rotateX: -20,
-            duration: 1,
-            delay: 0.8,
-            ease: 'power3.out'
+        navToggle.addEventListener('click', () => {
+            setMenu(!mobileMenu.classList.contains('is-open'));
         });
+
+        mobileMenu.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', () => setMenu(false));
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && mobileMenu.classList.contains('is-open')) setMenu(false);
+        });
+
+        // Leaving the mobile breakpoint must never strand the panel open
+        const wide = window.matchMedia('(min-width: 769px)');
+        const onWide = (e) => { if (e.matches) setMenu(false); };
+        if (wide.addEventListener) wide.addEventListener('change', onWide);
+        else if (wide.addListener) wide.addListener(onWide);
     }
 
     // ========================================
